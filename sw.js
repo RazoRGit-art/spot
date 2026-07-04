@@ -5,7 +5,7 @@
    - Leaflet (CDN) : cache d'abord (fige la lib pour le hors-ligne).
    - Tuiles de carte / API (OSM, Esri, Overpass, Nominatim, Open-Meteo, OSRM) : réseau seulement
      (trop volumineux à mettre en cache ; la carte nécessite du réseau). */
-const VERSION = 'carspots-v1';
+const VERSION = 'carspots-v2';
 const SHELL = ['./app.html', './manifest.json', './icon-192.png', './icon-512.png',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'];
@@ -33,7 +33,19 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  // coquille + leaflet : cache d'abord
+  // pages HTML (app.html) : RÉSEAU d'abord, pour recevoir les mises à jour immédiatement ;
+  // repli cache si hors-ligne
+  if (e.request.mode === 'navigate' || url.pathname.endsWith('.html')) {
+    e.respondWith(
+      fetch(e.request).then(resp => {
+        const copy = resp.clone();
+        caches.open(VERSION).then(c => c.put(e.request, copy));
+        return resp;
+      }).catch(() => caches.match(e.request).then(hit => hit || caches.match('./app.html')))
+    );
+    return;
+  }
+  // coquille statique (icônes, manifest) + leaflet : cache d'abord
   const isShell = SHELL.some(s => e.request.url === new URL(s, self.registration.scope).href || e.request.url === s);
   if (isShell || url.origin === location.origin) {
     e.respondWith(
