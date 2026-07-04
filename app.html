@@ -204,6 +204,7 @@
     </select>
   </div>
   <div class="row">
+    <button class="ghost" onclick="loadCloudBackup()">☁️ Récupérer la sauvegarde en ligne</button>
     <button class="ghost" onclick="exportBackup()">⬇ Sauvegarde complète (fichier)</button>
     <button class="ghost" onclick="document.getElementById('import-file').click()">⬆ Importer une sauvegarde</button>
     <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importBackup(this.files[0])">
@@ -1099,33 +1100,46 @@ function exportBackup(){
   download('carspots-sauvegarde-' + new Date().toISOString().slice(0, 10) + '.json',
            JSON.stringify(data, null, 2), 'application/json');
 }
+function mergeBackup(d){
+  if(d.app !== 'carspots' || !Array.isArray(d.saved)) throw new Error('format');
+  // fusion : les entrées importées écrasent celles de même id, le reste est conservé
+  let addedS = 0, addedF = 0;
+  (d.folders || []).forEach(f => {
+    const cur = FOLDERS.find(x => x.id === f.id);
+    if(cur) cur.name = f.name; else { FOLDERS.push(f); addedF++; }
+  });
+  d.saved.forEach(s => {
+    const i = SAVED.findIndex(x => x.id === s.id);
+    if(i >= 0) SAVED[i] = s; else { SAVED.push(s); addedS++; }
+  });
+  Object.assign(CURATION, d.curation || {});
+  persistFolders(); persistSaved(); persistCuration();
+  renderFolderFilter(''); renderSaved();
+  return { addedS, addedF };
+}
 function importBackup(file){
   if(!file) return;
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const d = JSON.parse(reader.result);
-      if(d.app !== 'carspots' || !Array.isArray(d.saved)) throw new Error('format');
-      // fusion : les entrées importées écrasent celles de même id, le reste est conservé
-      let addedS = 0, addedF = 0;
-      (d.folders || []).forEach(f => {
-        const cur = FOLDERS.find(x => x.id === f.id);
-        if(cur) cur.name = f.name; else { FOLDERS.push(f); addedF++; }
-      });
-      d.saved.forEach(s => {
-        const i = SAVED.findIndex(x => x.id === s.id);
-        if(i >= 0) SAVED[i] = s; else { SAVED.push(s); addedS++; }
-      });
-      Object.assign(CURATION, d.curation || {});
-      persistFolders(); persistSaved(); persistCuration();
-      renderFolderFilter(''); renderSaved();
-      alert('Import réussi : ' + addedS + ' nouveau(x) spot(s), ' + addedF + ' nouveau(x) dossier(s) — le reste a été fusionné.');
+      const r = mergeBackup(JSON.parse(reader.result));
+      alert('Import réussi : ' + r.addedS + ' nouveau(x) spot(s), ' + r.addedF + ' nouveau(x) dossier(s) — le reste a été fusionné.');
     } catch(e){
       alert('Fichier invalide : choisis une sauvegarde faite avec « ⬇ Sauvegarde complète ».');
     }
   };
   reader.readAsText(file);
   document.getElementById('import-file').value = '';
+}
+async function loadCloudBackup(){
+  try {
+    const resp = await fetch('data/sync.json', { cache: 'no-store' });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const r = mergeBackup(await resp.json());
+    alert('Sauvegarde en ligne récupérée : ' + r.addedS + ' nouveau(x) spot(s) ajoutés, tri visuel synchronisé.');
+  } catch(e){
+    alert('Pas de sauvegarde en ligne disponible (ou pas de réseau).');
+  }
 }
 function download(filename, text, mime){
   const blob = new Blob([text], { type: mime });
