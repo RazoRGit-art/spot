@@ -37,7 +37,9 @@ Passe les spots en revue un par un sur **grande vue satellite** : **✅ Garder /
 Le bouton **« 📥 Envoyer les ✅ gardés vers Mes spots »** copie ta shortlist dans « Mes spots » (dans le dossier sélectionné), sans doublons.
 
 ### 🔄 Synchro PC ↔ téléphone
-Les spots enregistrés vivent dans le navigateur de **chaque appareil** (localStorage). Pour les retrouver partout : onglet Mes spots → **« ⬇ Sauvegarde complète »** (fichier JSON contenant spots, dossiers, notes, étoiles et tri visuel) → envoie-toi le fichier (WhatsApp, mail, Drive…) → **« ⬆ Importer »** sur l'autre appareil. L'import **fusionne** (rien n'est perdu ; en cas de doublon, la version importée gagne).
+**Synchro automatique (recommandé)** : onglet Mes spots → colle un **jeton GitHub** (scope « gist » uniquement, lien fourni dans l'app) sur chaque appareil. Tes spots/dossiers/notes/tri sont alors stockés dans un **Gist privé de ton compte** : envoi **automatique** ~8 s après chaque modification, récupération **automatique** au démarrage (+ boutons ⬆ Envoyer / ⬇ Récupérer). Fusion sans doublons. *Limite honnête : une suppression ne se propage pas (le spot supprimé peut revenir au prochain ⬇ s'il est encore dans le cloud).*
+
+**Sauvegarde manuelle (secours)** : « ⬇ Sauvegarde complète » (fichier JSON) → transfert → « ⬆ Importer » sur l'autre appareil.
 
 ### ⭐ Mes spots — filtres
 En plus des dossiers : filtre par **type de lieu**, par statut (**⭐ favoris / ✓ visités / 🕐 à visiter**) et tri (**distance, nom, étoiles**). Les exports GPX/KML portent sur **ce qui est affiché** (filtres inclus).

@@ -5,7 +5,7 @@
    - Leaflet (CDN) : cache d'abord (fige la lib pour le hors-ligne).
    - Tuiles de carte / API (OSM, Esri, Overpass, Nominatim, Open-Meteo, OSRM) : réseau seulement
      (trop volumineux à mettre en cache ; la carte nécessite du réseau). */
-const VERSION = 'carspots-v2';
+const VERSION = 'carspots-v3';
 const SHELL = ['./app.html', './manifest.json', './icon-192.png', './icon-512.png',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'];

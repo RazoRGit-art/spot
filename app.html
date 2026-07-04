@@ -203,13 +203,30 @@
       <option value="note">Étoiles (haut → bas)</option>
     </select>
   </div>
-  <div class="row">
-    <button class="ghost" onclick="loadCloudBackup()">☁️ Récupérer la sauvegarde en ligne</button>
-    <button class="ghost" onclick="exportBackup()">⬇ Sauvegarde complète (fichier)</button>
-    <button class="ghost" onclick="document.getElementById('import-file').click()">⬆ Importer une sauvegarde</button>
-    <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importBackup(this.files[0])">
-    <span class="muted">Pour retrouver les mêmes spots sur PC et téléphone : exporte ici, envoie-toi le fichier (WhatsApp, mail…), importe sur l'autre appareil.</span>
+  <div class="banner info" id="sync-off" style="display:none">
+    <b>☁️ Synchro automatique (recommandé)</b> — mêmes spots sur PC et téléphone, sans fichier :<br>
+    1) <a href="https://github.com/settings/tokens/new?scopes=gist&description=CarSpots-sync" target="_blank" rel="noopener">crée ton jeton GitHub ici</a> (la case <b>gist</b> est pré-cochée ; expiration : « No expiration ») → « Generate token » → copie-le ;<br>
+    2) colle-le ci-dessous (une seule fois par appareil). Tes spots seront stockés dans un <b>Gist privé</b> de TON compte GitHub.
+    <div class="row" style="margin-top:8px">
+      <input id="gh-token" type="password" placeholder="jeton GitHub (ghp_…)">
+      <button class="primary" onclick="saveToken()">Activer la synchro</button>
+    </div>
   </div>
+  <div id="sync-on" style="display:none;margin-bottom:10px">
+    <button class="primary" onclick="pushGist()">⬆ Envoyer</button>
+    <button class="ghost" onclick="pullGist(false)">⬇ Récupérer</button>
+    <span class="muted" id="sync-status">☁️ synchro activée</span>
+    <button class="ghost" onclick="forgetToken()">✖ Désactiver sur cet appareil</button>
+  </div>
+  <details style="margin-bottom:10px">
+    <summary class="muted">Sauvegarde manuelle (fichier) et ancienne sauvegarde en ligne</summary>
+    <div class="row" style="margin-top:8px">
+      <button class="ghost" onclick="loadCloudBackup()">☁️ Récupérer l'ancienne sauvegarde (dépôt)</button>
+      <button class="ghost" onclick="exportBackup()">⬇ Sauvegarde complète (fichier)</button>
+      <button class="ghost" onclick="document.getElementById('import-file').click()">⬆ Importer une sauvegarde</button>
+      <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importBackup(this.files[0])">
+    </div>
+  </details>
   <div id="saved-map"></div>
   <div id="saved-actions"></div>
   <div id="saved-results"></div>
@@ -924,12 +941,12 @@ async function loadWeather(){
 /* ================= mes spots (localStorage) ================= */
 const SAVED_KEY = 'spotphoto_saved_v1';
 let SAVED = (() => { try { return JSON.parse(localStorage.getItem(SAVED_KEY)) || []; } catch { return []; } })();
-function persistSaved(){ localStorage.setItem(SAVED_KEY, JSON.stringify(SAVED)); }
+function persistSaved(){ localStorage.setItem(SAVED_KEY, JSON.stringify(SAVED)); schedulePush(); }
 
 /* -- dossiers / collections -- */
 const FOLDERS_KEY = 'spotphoto_folders_v1';
 let FOLDERS = (() => { try { return JSON.parse(localStorage.getItem(FOLDERS_KEY)) || []; } catch { return []; } })();
-function persistFolders(){ localStorage.setItem(FOLDERS_KEY, JSON.stringify(FOLDERS)); }
+function persistFolders(){ localStorage.setItem(FOLDERS_KEY, JSON.stringify(FOLDERS)); schedulePush(); }
 function folderName(id){ const f = FOLDERS.find(x => x.id === id); return f ? f.name : ''; }
 function activeFolderVal(){ const el = document.getElementById('folder-filter'); return el ? el.value : ''; }
 function savedView(){
@@ -1141,6 +1158,97 @@ async function loadCloudBackup(){
     alert('Pas de sauvegarde en ligne disponible (ou pas de réseau).');
   }
 }
+
+/* ================= synchro automatique via Gist GitHub privé ================= */
+const GHT_KEY = 'spotphoto_gh_token', GID_KEY = 'spotphoto_gist_id', SYNC_FILE = 'carspots-sync.json';
+function ghToken(){ return localStorage.getItem(GHT_KEY) || ''; }
+function ghHeaders(){ return { 'Authorization': 'Bearer ' + ghToken(), 'Accept': 'application/vnd.github+json' }; }
+function syncStatus(msg){ const el = document.getElementById('sync-status'); if(el) el.textContent = '☁️ ' + msg; }
+function renderSyncUI(){
+  const on = !!ghToken();
+  const off = document.getElementById('sync-off'), onEl = document.getElementById('sync-on');
+  if(off) off.style.display = on ? 'none' : '';
+  if(onEl) onEl.style.display = on ? '' : 'none';
+}
+function saveToken(){
+  const t = document.getElementById('gh-token').value.trim();
+  if(!t){ alert('Colle d\'abord ton jeton GitHub (il commence par ghp_ ou github_pat_).'); return; }
+  localStorage.setItem(GHT_KEY, t);
+  document.getElementById('gh-token').value = '';
+  renderSyncUI();
+  pullGist(false); // premier contact : récupère ce qui existe déjà (ou signale qu'il faut Envoyer)
+}
+function forgetToken(){
+  if(!confirm('Désactiver la synchro sur cet appareil ? (le Gist et tes spots locaux sont conservés)')) return;
+  localStorage.removeItem(GHT_KEY); localStorage.removeItem(GID_KEY); renderSyncUI();
+}
+async function findGistId(){
+  const cached = localStorage.getItem(GID_KEY);
+  if(cached) return cached;
+  const resp = await fetch('https://api.github.com/gists?per_page=100', { headers: ghHeaders() });
+  if(!resp.ok) throw new Error('jeton refusé (HTTP ' + resp.status + ')');
+  const list = await resp.json();
+  const hit = list.find(g => g.files && g.files[SYNC_FILE]);
+  if(hit){ localStorage.setItem(GID_KEY, hit.id); return hit.id; }
+  return null;
+}
+async function pushGist(){
+  if(!ghToken()){ alert('Active d\'abord la synchro (jeton GitHub).'); return; }
+  syncStatus('envoi…');
+  try {
+    const content = JSON.stringify({ app: 'carspots', version: 1, date: new Date().toISOString(),
+                                     saved: SAVED, folders: FOLDERS, curation: CURATION });
+    const body = { description: 'Car Spot Finder — synchro des spots', files: {} };
+    body.files[SYNC_FILE] = { content };
+    const id = await findGistId();
+    let resp;
+    if(id){
+      resp = await fetch('https://api.github.com/gists/' + id, { method: 'PATCH', headers: ghHeaders(), body: JSON.stringify(body) });
+    } else {
+      body.public = false; // Gist PRIVÉ
+      resp = await fetch('https://api.github.com/gists', { method: 'POST', headers: ghHeaders(), body: JSON.stringify(body) });
+    }
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const g = await resp.json();
+    if(g.id) localStorage.setItem(GID_KEY, g.id);
+    syncStatus('à jour — envoyé à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
+  } catch(e){
+    syncStatus('erreur d\'envoi');
+    if(String(e.message).includes('404')) localStorage.removeItem(GID_KEY); // gist supprimé -> on recréera
+  }
+}
+async function pullGist(silent){
+  if(!ghToken()){ if(!silent) alert('Active d\'abord la synchro (jeton GitHub).'); return; }
+  syncStatus('récupération…');
+  try {
+    const id = await findGistId();
+    if(!id){
+      syncStatus('aucune donnée cloud — clique « ⬆ Envoyer » depuis l\'appareil qui a tes spots');
+      if(!silent) alert('Jeton OK ✔ mais aucune donnée cloud pour l\'instant.\nSur l\'appareil qui contient tes spots, clique « ⬆ Envoyer ».');
+      return;
+    }
+    const resp = await fetch('https://api.github.com/gists/' + id, { headers: ghHeaders() });
+    if(!resp.ok){ if(resp.status === 404) localStorage.removeItem(GID_KEY); throw new Error('HTTP ' + resp.status); }
+    const g = await resp.json();
+    const f = g.files && g.files[SYNC_FILE];
+    if(!f) throw new Error('fichier de synchro absent du gist');
+    let text = f.content;
+    if(f.truncated) text = await (await fetch(f.raw_url)).text();
+    const r = mergeBackup(JSON.parse(text));
+    syncStatus('à jour — reçu à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
+    if(!silent) alert('Synchro OK : ' + r.addedS + ' nouveau(x) spot(s) récupéré(s), tri visuel fusionné.');
+  } catch(e){
+    syncStatus('erreur de récupération');
+    if(!silent) alert('Récupération impossible : ' + e.message);
+  }
+}
+// envoi automatique différé : 8 s après la dernière modification locale
+let _pushTimer = null;
+function schedulePush(){
+  if(!ghToken()) return;
+  clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(pushGist, 8000);
+}
 function download(filename, text, mime){
   const blob = new Blob([text], { type: mime });
   const u = URL.createObjectURL(blob);
@@ -1235,7 +1343,7 @@ async function loadSpots(){
 const CUR_KEY = 'spotphoto_curation_v1';
 let CURATION = (() => { try { return JSON.parse(localStorage.getItem(CUR_KEY)) || {}; } catch { return {}; } })();
 let TRI_QUEUE = [];
-function persistCuration(){ localStorage.setItem(CUR_KEY, JSON.stringify(CURATION)); }
+function persistCuration(){ localStorage.setItem(CUR_KEY, JSON.stringify(CURATION)); schedulePush(); }
 function triStats(){
   let keep = 0, rej = 0;
   SPOTS.forEach(s => { if(CURATION[s.id] === 'keep') keep++; else if(CURATION[s.id] === 'reject') rej++; });
@@ -1383,6 +1491,8 @@ renderSaved();
 loadWeather();
 loadSpots();
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+renderSyncUI();
+if(ghToken()) pullGist(true); // synchro au démarrage (silencieuse)
 // PWA : service worker (hors-ligne) — actif seulement en HTTPS ou localhost
 if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')){
   navigator.serviceWorker.register('sw.js').catch(() => {});
