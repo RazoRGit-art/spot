@@ -203,6 +203,12 @@
       <option value="note">Étoiles (haut → bas)</option>
     </select>
   </div>
+  <div class="row">
+    <button class="ghost" onclick="exportBackup()">⬇ Sauvegarde complète (fichier)</button>
+    <button class="ghost" onclick="document.getElementById('import-file').click()">⬆ Importer une sauvegarde</button>
+    <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importBackup(this.files[0])">
+    <span class="muted">Pour retrouver les mêmes spots sur PC et téléphone : exporte ici, envoie-toi le fichier (WhatsApp, mail…), importe sur l'autre appareil.</span>
+  </div>
   <div id="saved-map"></div>
   <div id="saved-actions"></div>
   <div id="saved-results"></div>
@@ -1085,6 +1091,41 @@ function renderSaved(){
     view.forEach(s => box.appendChild(savedCard(s)));
   }
   updateSavedMap(); // la carte reflète les filtres
+}
+/* -- sauvegarde / synchro manuelle entre appareils -- */
+function exportBackup(){
+  const data = { app: 'carspots', version: 1, date: new Date().toISOString(),
+                 saved: SAVED, folders: FOLDERS, curation: CURATION };
+  download('carspots-sauvegarde-' + new Date().toISOString().slice(0, 10) + '.json',
+           JSON.stringify(data, null, 2), 'application/json');
+}
+function importBackup(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const d = JSON.parse(reader.result);
+      if(d.app !== 'carspots' || !Array.isArray(d.saved)) throw new Error('format');
+      // fusion : les entrées importées écrasent celles de même id, le reste est conservé
+      let addedS = 0, addedF = 0;
+      (d.folders || []).forEach(f => {
+        const cur = FOLDERS.find(x => x.id === f.id);
+        if(cur) cur.name = f.name; else { FOLDERS.push(f); addedF++; }
+      });
+      d.saved.forEach(s => {
+        const i = SAVED.findIndex(x => x.id === s.id);
+        if(i >= 0) SAVED[i] = s; else { SAVED.push(s); addedS++; }
+      });
+      Object.assign(CURATION, d.curation || {});
+      persistFolders(); persistSaved(); persistCuration();
+      renderFolderFilter(''); renderSaved();
+      alert('Import réussi : ' + addedS + ' nouveau(x) spot(s), ' + addedF + ' nouveau(x) dossier(s) — le reste a été fusionné.');
+    } catch(e){
+      alert('Fichier invalide : choisis une sauvegarde faite avec « ⬇ Sauvegarde complète ».');
+    }
+  };
+  reader.readAsText(file);
+  document.getElementById('import-file').value = '';
 }
 function download(filename, text, mime){
   const blob = new Blob([text], { type: mime });

@@ -36,6 +36,9 @@ L'onglet **Parcourir** liste toute la base et permet de **trier par distance** (
 Passe les spots en revue un par un sur **grande vue satellite** : **✅ Garder / ❌ Rejeter / ⏭ Passer**. Ton verdict est mémorisé (localStorage) et devient un filtre dans « Parcourir » → en ~15 min tu transformes la base en **shortlist validée à l'œil**.
 Le bouton **« 📥 Envoyer les ✅ gardés vers Mes spots »** copie ta shortlist dans « Mes spots » (dans le dossier sélectionné), sans doublons.
 
+### 🔄 Synchro PC ↔ téléphone
+Les spots enregistrés vivent dans le navigateur de **chaque appareil** (localStorage). Pour les retrouver partout : onglet Mes spots → **« ⬇ Sauvegarde complète »** (fichier JSON contenant spots, dossiers, notes, étoiles et tri visuel) → envoie-toi le fichier (WhatsApp, mail, Drive…) → **« ⬆ Importer »** sur l'autre appareil. L'import **fusionne** (rien n'est perdu ; en cas de doublon, la version importée gagne).
+
 ### ⭐ Mes spots — filtres
 En plus des dossiers : filtre par **type de lieu**, par statut (**⭐ favoris / ✓ visités / 🕐 à visiter**) et tri (**distance, nom, étoiles**). Les exports GPX/KML portent sur **ce qui est affiché** (filtres inclus).
 
