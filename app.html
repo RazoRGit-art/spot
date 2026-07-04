@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a1a1a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Car Spot Finder — Balma</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  body { font-family: -apple-system, sans-serif; max-width: 760px; margin: 32px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  h2 { font-size: 17px; font-weight: 600; }
+  .row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  select, input, button { padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; }
+  input[type=text] { flex: 1; min-width: 180px; }
+  button.primary { cursor: pointer; background: #1a1a1a; color: white; border: none; }
+  button.primary:hover { opacity: 0.85; }
+  .ghost { display: inline-block; background: #f0f0f0; color: #1a1a1a; border: 1px solid #ddd; border-radius: 8px; padding: 4px 9px; font-size: 12px; margin: 6px 6px 0 0; cursor: pointer; text-decoration: none; }
+  .ghost:hover { background: #e6e6e6; }
+  .card { border: 1px solid #ddd; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+  .card h3 { margin: 0 0 4px; font-size: 15px; }
+  .card p { margin: 3px 0; font-size: 13px; }
+  .muted { color: #888; font-size: 13px; }
+  .badge { display: inline-block; color: #fff; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 500; }
+  .warnbadge { display: inline-block; background: #ffe0b2; color: #8a5300; border-radius: 6px; padding: 1px 6px; font-size: 11px; }
+  .thumb-wrap { position: relative; width: 100%; height: 150px; background: #e9edf0; border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
+  .thumb-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb-dot { position: absolute; width: 14px; height: 14px; border: 2px solid #fff; background: #ff3b30; border-radius: 50%; transform: translate(-50%,-50%); box-shadow: 0 0 0 1px rgba(0,0,0,.5); pointer-events: none; }
+  .stars { font-size: 18px; color: #f5a623; letter-spacing: 3px; margin: 4px 0; }
+  .star { cursor: pointer; }
+  .note-input { width: 100%; margin-top: 6px; box-sizing: border-box; }
+  .folder-select { margin-top: 8px; font-size: 12px; padding: 5px 7px; }
+  .folder-head { margin: 22px 0 8px; font-size: 14px; font-weight: 600; color: #444; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #ccc; background: #fff; color: #666; border-radius: 16px; padding: 4px 10px; font-size: 12px; margin: 0 6px 6px 0; cursor: pointer; }
+  .chip.on { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; }
+  section { margin-bottom: 34px; }
+  #map { height: 380px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #ddd; z-index: 0; }
+  #saved-map { height: 320px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #ddd; z-index: 0; }
+  .banner { border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 14px; line-height: 1.5; }
+  .banner.warn { background: #fff5e6; border: 1px solid #ffc27a; color: #8a5300; }
+  .banner.warn code { background: #ffe9c7; padding: 1px 6px; border-radius: 4px; }
+  .banner.info { background: #eaf3ff; border: 1px solid #9cc3ff; color: #1b4a8a; }
+  .legend { font-size: 12px; color: #666; margin: -4px 0 14px; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; vertical-align:middle; }
+  .weather { border: 1px solid #ddd; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+  .wrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .wcard { flex: 1; min-width: 110px; border: 1px solid #eee; border-radius: 8px; padding: 8px; text-align: center; }
+  .wcard .wday { font-weight: 600; font-size: 13px; }
+  .wcard .wemo { font-size: 24px; }
+  .wcard .wlight { font-size: 11px; color: #1b4a8a; margin-top: 3px; }
+  details summary { cursor: pointer; }
+  .tabs { display: flex; gap: 4px; margin: 4px 0 20px; border-bottom: 1px solid #ddd; flex-wrap: wrap; }
+  .tab { background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 12px; font-size: 14px; cursor: pointer; color: #777; }
+  .tab:hover { color: #1a1a1a; }
+  .tab.active { color: #1a1a1a; border-bottom-color: #1a1a1a; font-weight: 600; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+</style>
+</head>
+<body>
+
+<h1>Car Spot Finder — Balma</h1>
+<p class="muted">Décris ta voiture (et, en option, un type de lieu ou « route » pour les routes sinueuses). L'appli devine le style, planifie la lumière et trouve des lieux réels autour de Balma via OpenStreetMap. Gratuit, sans clé.</p>
+
+<div id="load-error"></div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="search">🔍 Recherche</button>
+  <button class="tab" data-tab="browse">📂 Parcourir la base</button>
+  <button class="tab" data-tab="tri">🧹 Tri visuel</button>
+  <button class="tab" data-tab="saved">⭐ Mes spots</button>
+</div>
+
+<div class="panel active" id="panel-search">
+<section>
+  <h2>Trouve des spots pour ta voiture</h2>
+  <div class="row">
+    <input id="car-input" type="text" list="car-list" placeholder="ex: 718 bleu, Golf GTI, Defender, Mustang…">
+    <datalist id="car-list"></datalist>
+    <input id="type-input" type="text" placeholder="type de lieu (option) : lac, église, route, balcon…">
+  </div>
+  <div class="row">
+    <input id="desire-input" type="text" placeholder="ton envie (option) : brume, néon, béton brut, rouille, reflets, être seul, sol mouillé…">
+  </div>
+  <div class="row">
+    <select id="radius-select">
+      <option value="10000" selected>10 km</option>
+      <option value="20000">20 km</option>
+      <option value="30000">30 km</option>
+      <option value="50000">50 km</option>
+    </select>
+    <input id="date-input" type="date" title="Date pour l'heure dorée">
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap"><input type="checkbox" id="car-access" checked> 🚗 accessible en voiture</label>
+    <button class="primary" onclick="findSpots()">Chercher</button>
+  </div>
+  <div id="detected"></div>
+  <div id="planning"></div>
+  <div id="map"></div>
+  <div class="legend"><span class="dot" style="background:#1a1a1a"></span>Ta base &nbsp;·&nbsp; pastilles colorées = lieux découverts (couleur = catégorie) &nbsp;·&nbsp; vignettes = vue satellite du lieu (© Esri), point rouge = position exacte</div>
+  <div style="margin-bottom:10px">
+    <button id="addmode-btn" class="ghost" onclick="toggleAddMode()">➕ Mode ajout (clic carte)</button>
+    <button class="ghost" onclick="locateMe()">📍 Autour de moi</button>
+    <span class="muted">Bascule la carte en <b>Satellite</b> (coin haut-droit), active le mode ajout, puis clique un lieu repéré pour l'enregistrer dans « Mes spots ».</span>
+  </div>
+  <div id="disco-filters" style="margin-bottom:8px"></div>
+  <div id="disco-results"></div>
+  <details id="base-details" style="margin-top:12px">
+    <summary class="muted">Spots de ta base correspondants</summary>
+    <div id="base-results" style="margin-top:10px"></div>
+  </details>
+</section>
+
+<section>
+  <h2>Recherche libre par nom</h2>
+  <p class="muted">Pour un lieu précis connu par son nom ou son adresse (OpenStreetMap / Nominatim).</p>
+  <div class="row">
+    <input id="search-query" type="text" placeholder="ex: parking Balma, Pech David, lac Sesquières…">
+    <button class="primary" onclick="searchNewSpots()">Chercher</button>
+  </div>
+  <div id="search-results"></div>
+</section>
+</div><!-- /panel-search -->
+
+<div class="panel" id="panel-browse">
+<section>
+  <h2>📂 Parcourir la base (<span id="browse-count">0</span> spots)</h2>
+  <p class="muted">Tous les spots de la base, triables par <b>distance</b> (depuis Balma), <b>type de lieu</b> et <b>style de voiture</b>.</p>
+  <div class="row">
+    <select id="browse-sort" onchange="renderBrowse()">
+      <option value="dist">Trier : distance (proche → loin)</option>
+      <option value="nom">Trier : nom (A → Z)</option>
+      <option value="cat">Trier : type de lieu</option>
+    </select>
+    <select id="browse-cat" onchange="renderBrowse()"><option value="">Tous les types</option></select>
+    <select id="browse-style" onchange="renderBrowse()">
+      <option value="">Tous les styles</option>
+      <option value="sport">Sportive</option>
+      <option value="urbain">Citadine / berline</option>
+      <option value="youngtimer">Youngtimer</option>
+      <option value="4x4">4x4 / SUV</option>
+      <option value="americaine">Américaine</option>
+    </select>
+    <select id="browse-moment" onchange="renderBrowse()">
+      <option value="">Tous moments</option>
+      <option value="lever">Lever du jour</option>
+      <option value="coucher">Coucher du soleil</option>
+    </select>
+    <select id="browse-access" onchange="renderBrowse()">
+      <option value="">Accès voiture : tous</option>
+      <option value="60">🚗 Accessible (≤ 60 m)</option>
+      <option value="150">🚶 Proche (≤ 150 m)</option>
+    </select>
+    <select id="browse-curation" onchange="renderBrowse()">
+      <option value="">Tri visuel : tous</option>
+      <option value="keep">✅ Gardés</option>
+      <option value="untried">🕐 Pas encore triés</option>
+      <option value="reject">❌ Rejetés</option>
+    </select>
+  </div>
+  <div id="browse-results"></div>
+</section>
+</div><!-- /panel-browse -->
+
+<div class="panel" id="panel-tri">
+<section>
+  <h2>🧹 Tri visuel éclair</h2>
+  <p class="muted">Passe tes spots en revue sur la <b>vue satellite</b> : <b>Garder</b> les prometteurs, <b>Rejeter</b> les nuls. Ton verdict est mémorisé (navigateur) et filtrable dans « Parcourir ». ~15 min pour une shortlist en or.</p>
+  <div id="tri-progress" class="muted" style="margin-bottom:10px"></div>
+  <div id="tri-card"></div>
+  <div style="margin-top:14px">
+    <button class="primary" onclick="sendKeptToSaved()">📥 Envoyer les ✅ gardés vers Mes spots</button>
+    <button class="ghost" onclick="resetTri()">↺ Réinitialiser tout le tri</button>
+  </div>
+</section>
+</div><!-- /panel-tri -->
+
+<div class="panel" id="panel-saved">
+<section id="saved-section">
+  <h2>⭐ Mes spots enregistrés</h2>
+  <p class="muted">Enregistrés dans ton navigateur (localStorage). Organise-les en <b>dossiers</b>, note-les, exporte-les. Les nouveaux spots vont dans le dossier sélectionné ci-dessous.</p>
+  <div class="row">
+    <input id="folder-name" type="text" placeholder="nouveau dossier (ex: Shooting 718, Friches, À visiter…)">
+    <button class="primary" onclick="addFolder()">+ Dossier</button>
+    <select id="folder-filter" onchange="renderSaved()"></select>
+  </div>
+  <div class="row">
+    <select id="saved-cat" onchange="renderSaved()"><option value="">Tous les types</option></select>
+    <select id="saved-flag" onchange="renderSaved()">
+      <option value="">Tous les spots</option>
+      <option value="favori">⭐ Favoris</option>
+      <option value="visite">✓ Visités</option>
+      <option value="avisiter">🕐 À visiter (non visités)</option>
+    </select>
+    <select id="saved-sort" onchange="renderSaved()">
+      <option value="">Ordre d'ajout</option>
+      <option value="dist">Distance (proche → loin)</option>
+      <option value="nom">Nom (A → Z)</option>
+      <option value="note">Étoiles (haut → bas)</option>
+    </select>
+  </div>
+  <div id="saved-map"></div>
+  <div id="saved-actions"></div>
+  <div id="saved-results"></div>
+</section>
+</div><!-- /panel-saved -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+const CENTER = [43.6086, 1.4996]; // Balma
+let SPOTS = [];
+let map, baseLayer, discoLayer, BASE_PTS = [];
+let ALL_DISCO = [], ACTIVE_CATS = new Set(), DISCO_STYLE = [], DISCO_SUNAZ = null;
+
+/* ================= utilitaires ================= */
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+function escapeXml(s){
+  return String(s ?? '').replace(/[<>&'"]/g, c =>
+    ({ '<':'&lt;', '>':'&gt;', '&':'&amp;', "'":'&apos;', '"':'&quot;' }[c]));
+}
+function slugify(str){
+  return String(str).toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'spot';
+}
+function normalize(s){ return String(s).toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, ''); }
+function haversine(lat1, lon1, lat2, lon2){
+  const R = 6371, toRad = x => x * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+const COMPASS16 = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+function compass(deg){ return COMPASS16[Math.round((((deg%360)+360)%360)/22.5)%16]; }
+const DIR_MAP = { N:0,NNE:22.5,NE:45,ENE:67.5,E:90,ESE:112.5,SE:135,SSE:157.5,S:180,
+  SSW:202.5,SW:225,WSW:247.5,W:270,WNW:292.5,NW:315,NNW:337.5,
+  SSO:202.5,SO:225,OSO:247.5,O:270,ONO:292.5,NO:315,NNO:337.5 };
+function dirToDeg(v){
+  if(v == null) return null;
+  const n = parseFloat(v); if(!isNaN(n)) return ((n%360)+360)%360;
+  const k = String(v).toUpperCase().replace(/[^NESWO]/g, '');
+  return DIR_MAP[k] != null ? DIR_MAP[k] : null;
+}
+
+/* ================= position du soleil (SunCalc, local, sans API) ================= */
+const SunCalc = (function(){
+  const rad = Math.PI/180, dayMs = 864e5, J1970 = 2440588, J2000 = 2451545, e = rad*23.4397;
+  const toJulian = d => d.valueOf()/dayMs - 0.5 + J1970;
+  const fromJulian = j => new Date((j + 0.5 - J1970) * dayMs);
+  const toDays = d => toJulian(d) - J2000;
+  const rightAscension = (l,b) => Math.atan2(Math.sin(l)*Math.cos(e)-Math.tan(b)*Math.sin(e), Math.cos(l));
+  const declination = (l,b) => Math.asin(Math.sin(b)*Math.cos(e)+Math.cos(b)*Math.sin(e)*Math.sin(l));
+  const azimuth = (H,phi,dec) => Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(phi)-Math.tan(dec)*Math.cos(phi));
+  const altitude = (H,phi,dec) => Math.asin(Math.sin(phi)*Math.sin(dec)+Math.cos(phi)*Math.cos(dec)*Math.cos(H));
+  const siderealTime = (d,lw) => rad*(280.16+360.9856235*d)-lw;
+  const solarMeanAnomaly = d => rad*(357.5291+0.98560028*d);
+  const eclipticLongitude = M => { const C=rad*(1.9148*Math.sin(M)+0.02*Math.sin(2*M)+0.0003*Math.sin(3*M)); return M+C+rad*102.9372+Math.PI; };
+  const sunCoords = d => { const M=solarMeanAnomaly(d), L=eclipticLongitude(M); return {dec:declination(L,0), ra:rightAscension(L,0), M, L}; };
+  const J0 = 0.0009;
+  const julianCycle = (d,lw) => Math.round(d-J0-lw/(2*Math.PI));
+  const approxTransit = (Ht,lw,n) => J0+(Ht+lw)/(2*Math.PI)+n;
+  const solarTransitJ = (ds,M,L) => J2000+ds+0.0053*Math.sin(M)-0.0069*Math.sin(2*L);
+  const hourAngle = (h,phi,d) => Math.acos((Math.sin(h)-Math.sin(phi)*Math.sin(d))/(Math.cos(phi)*Math.cos(d)));
+  const getSetJ = (h,lw,phi,dec,n,M,L) => solarTransitJ(approxTransit(hourAngle(h,phi,dec),lw,n),M,L);
+  return {
+    getPosition(date,lat,lng){ const lw=rad*-lng, phi=rad*lat, d=toDays(date), c=sunCoords(d), H=siderealTime(d,lw)-c.ra;
+      return { azimuth: azimuth(H,phi,c.dec), altitude: altitude(H,phi,c.dec) }; },
+    getTimes(date,lat,lng){ const lw=rad*-lng, phi=rad*lat, d=toDays(date), n=julianCycle(d,lw), ds=approxTransit(0,lw,n),
+      M=solarMeanAnomaly(ds), L=eclipticLongitude(M), dec=declination(L,0), Jnoon=solarTransitJ(ds,M,L),
+      Jset=getSetJ(-0.833*rad,lw,phi,dec,n,M,L), Jrise=Jnoon-(Jset-Jnoon);
+      return { sunrise: fromJulian(Jrise), sunset: fromJulian(Jset), solarNoon: fromJulian(Jnoon) }; }
+  };
+})();
+function sunAzDeg(date){ const p = SunCalc.getPosition(date, CENTER[0], CENTER[1]); return (p.azimuth*180/Math.PI + 180 + 360) % 360; }
+function orientHint(dirDeg, sunriseAz, sunsetAz){
+  if(dirDeg == null) return '';
+  const diff = (a,b) => { let d = Math.abs(a-b)%360; return d>180 ? 360-d : d; };
+  if(diff(dirDeg, sunriseAz) <= 55) return '🌅 orienté vers le lever — spot du matin';
+  if(diff(dirDeg, sunsetAz)  <= 55) return '🌇 orienté vers le coucher — spot du soir';
+  return 'orienté ' + compass(dirDeg);
+}
+
+/* ================= carte ================= */
+function initMap(){
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
+  const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagerie &copy; Esri' });
+  map = L.map('map', { layers: [osm] }).setView(CENTER, 12);
+  L.control.layers({ 'Plan (OSM)': osm, 'Satellite (Esri)': sat }, null, { position: 'topright' }).addTo(map);
+  baseLayer = L.layerGroup().addTo(map);
+  discoLayer = L.layerGroup().addTo(map);
+  map.on('click', onMapClick);
+}
+let addMode = false;
+function toggleAddMode(){
+  addMode = !addMode;
+  const b = document.getElementById('addmode-btn');
+  if(b){
+    b.textContent = addMode ? '➕ Mode ajout ACTIF — clique la carte' : '➕ Mode ajout (clic carte)';
+    b.style.background = addMode ? '#d81b60' : '';
+    b.style.color = addMode ? '#fff' : '';
+    b.style.borderColor = addMode ? '#d81b60' : '';
+  }
+  const m = document.getElementById('map'); if(m) m.style.cursor = addMode ? 'crosshair' : '';
+}
+let meMarker = null;
+function locateMe(){
+  if(!navigator.geolocation){ alert('Géolocalisation non disponible sur cet appareil.'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    if(meMarker) meMarker.remove();
+    meMarker = L.circleMarker([lat, lng], { radius: 9, color: '#1976d2', fillColor: '#1976d2', fillOpacity: 0.9, weight: 2 })
+      .bindPopup('📍 Tu es ici').addTo(map);
+    map.setView([lat, lng], 14);
+  }, () => alert('Position indisponible (autorise la localisation dans le navigateur).'), { enableHighAccuracy: true, timeout: 10000 });
+}
+function onMapClick(e){
+  if(!addMode) return;
+  const lat = +e.latlng.lat.toFixed(6), lng = +e.latlng.lng.toFixed(6);
+  const name = prompt('Spot repéré ici — donne-lui un nom (vide = annuler) :', '');
+  if(!name || !name.trim()) return;
+  L.circleMarker([lat, lng], { radius: 7, color: '#d81b60', fillColor: '#d81b60', fillOpacity: 0.9, weight: 1 })
+    .bindPopup('<b>' + escapeHtml(name.trim()) + '</b><br>Repéré → enregistré dans « Mes spots »').addTo(discoLayer).openPopup();
+  saveSpot({ name: name.trim(), lat: lat, lng: lng, category: 'repere', label: 'Repéré (satellite)', car_styles: [] });
+}
+function resetMap(){ baseLayer.clearLayers(); discoLayer.clearLayers(); BASE_PTS = []; }
+function addMarker(layer, lat, lng, color, html){
+  L.circleMarker([lat, lng], { radius: 7, color: color, fillColor: color, fillOpacity: 0.85, weight: 1 })
+    .bindPopup(html).addTo(layer);
+}
+function fitAll(){ if(BASE_PTS.length) map.fitBounds(BASE_PTS, { padding: [40, 40], maxZoom: 14 }); }
+function earthLink(lat, lng){
+  const a = document.createElement('a');
+  a.className = 'ghost'; a.textContent = '🌍 Google Earth';
+  a.href = `https://earth.google.com/web/@${lat},${lng},150a,1500d,35y,0h,0t,0r`;
+  a.target = '_blank'; a.rel = 'noopener';
+  a.addEventListener('click', e => e.stopPropagation());
+  return a;
+}
+function mapsLink(lat, lng){
+  const a = document.createElement('a');
+  a.className = 'ghost'; a.textContent = '🧭 Y aller';
+  a.href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  a.target = '_blank'; a.rel = 'noopener';
+  a.addEventListener('click', e => e.stopPropagation());
+  return a;
+}
+
+/* ================= classifieur voiture -> style ================= */
+const STYLE_LABELS = {
+  sport: 'Sportive / supercar', americaine: 'Américaine / muscle car',
+  '4x4': '4x4 / SUV', youngtimer: 'Youngtimer / classique',
+  urbain: 'Citadine / berline', mixte: 'Mixte (recherche large)'
+};
+const CAR_KEYWORDS = {
+  sport: ['718','cayman','boxster','911','992','991','gt3','gt4','gt2','porsche','ferrari','488','f8','296','lamborghini','lambo','huracan','mclaren','r8','amg gt','amg','lotus','elise','exige','emira','evora','alpine','a110','a310','supra','gtr','gt-r','nsx','m2','m3','m4','m5','z4','tt rs','rs3','rs4','rs5','rs6','rs7','type r','megane rs','clio rs','cupra','maserati','aston','vantage','db11','gti','abarth','brz','gr86','gr yaris','mx-5','miata','giulia','quadrifoglio','taycan','panamera','cayman gts'],
+  americaine: ['mustang','camaro','challenger','charger','corvette','dodge','chevrolet','chevy','muscle','v8','cadillac','pickup',' ram ','hemi','shelby','gt500','viper','trans am','pontiac','firebird','ford f','f-150','f150','silverado','thunderbird'],
+  '4x4': ['defender','wrangler','gladiator','land rover','landrover','range rover','rangerover','jeep','grand cherokee','4x4','suv','duster','cayenne','discovery','hilux','patrol','g class','g-class','classe g','bronco','pajero','land cruiser','landcruiser','4runner','raptor','x5','q7','niva','samurai','amarok','ranger','navara','d-max','dmax'],
+  youngtimer: ['e30','e28','e36','e34','2002','205','r5','r4','4l','r8 gordini','coccinelle','cox','beetle','combi','samba','aircooled','356','964','993','w123','w124','190e','pagode','w113','mehari','méhari','datsun','240z','ae86','celica','mgb','spitfire','gtv','gtv6','delta','integrale','type 2','type 1','classique','vintage','ancienne','youngtimer','2cv','estafette'],
+  urbain: ['golf','clio','208','207','206','2008','3008','captur','twingo','citadine','berline','tesla','model 3','model y','model s','model x','zoe','série 1','serie 1','serie 3','serie 5','classe a','class a','classe c','classe e','a1','a3','a4','a5','polo','fiesta','corsa','id3','id.3','i4','yaris','megane','308','508','c3','c4','ibiza','leon','swift','micra','up','kona','picanto']
+};
+const CAR_MODELS = ['Porsche 718 Cayman','Porsche 911','Alpine A110','Audi RS6','BMW M3','Mercedes-AMG GT','Ferrari 488','Lamborghini Huracan','Lotus Emira','Toyota GR Yaris','Mazda MX-5','Golf GTI','Mégane RS','Ford Mustang','Chevrolet Camaro','Dodge Challenger','Corvette','Land Rover Defender','Jeep Wrangler','Range Rover','Toyota Land Cruiser','Renault 5','Peugeot 205 GTI','Citroën 2CV','VW Combi','BMW E30','Porsche 964','Datsun 240Z','Tesla Model 3','Renault Clio RS'];
+const STYLE_PRIORITY = ['sport','americaine','4x4','youngtimer','urbain'];
+function classifyCar(text){
+  const t = ' ' + normalize(text) + ' ';
+  let best = null, bestScore = 0;
+  STYLE_PRIORITY.forEach(style => {
+    let score = 0;
+    CAR_KEYWORDS[style].forEach(kw => { if(t.includes(normalize(kw))) score++; });
+    if(score > bestScore){ bestScore = score; best = style; }
+  });
+  if(!best) return { style: 'mixte', label: STYLE_LABELS.mixte, matched: false };
+  return { style: best, label: STYLE_LABELS[best], matched: true };
+}
+
+/* ================= couleur -> conseil photo ================= */
+const COLOR_SYN = { bleu:'bleu',blue:'bleu',rouge:'rouge',red:'rouge',noir:'noir',noire:'noir',black:'noir',
+  blanc:'blanc',blanche:'blanc',white:'blanc',gris:'gris',grise:'gris',grey:'gris',gray:'gris',argent:'gris',silver:'gris',
+  jaune:'jaune',yellow:'jaune',orange:'orange',vert:'vert',verte:'vert',green:'vert' };
+const COLOR_TIPS = {
+  bleu:'Voiture bleue : superbe à l\'heure dorée ; évite un fond bleu/ciel plein cadre, préfère béton clair, rouille ou verdure.',
+  rouge:'Voiture rouge : ressort sur fonds neutres (béton, friche grise) ; attention à la surexposition du rouge en plein soleil.',
+  noir:'Voiture noire : lumière rasante (lever/coucher) + fonds clairs pour dessiner les reflets ; évite le plein midi.',
+  blanc:'Voiture blanche : fonds sombres ou colorés pour la détacher ; surveille les hautes lumières cramées.',
+  gris:'Voiture grise/argent : cherche des fonds colorés ou texturés (street art, rouille) pour éviter qu\'elle se fonde.',
+  jaune:'Voiture jaune : magnifique sur béton gris/bleuté (complémentaire) ; heure dorée = risque de surdose de tons chauds.',
+  orange:'Voiture orange : splendide sur fonds gris/bleutés ; évite les décors trop chauds.',
+  vert:'Voiture verte : contraste sur béton/urbain ; évite la pleine nature qui la noie.'
+};
+function detectColor(text){
+  const t = normalize(text);
+  for(const syn in COLOR_SYN){
+    if(new RegExp('\\b' + syn + '\\b').test(t)){ const c = COLOR_SYN[syn]; return { name: c, tip: COLOR_TIPS[c] }; }
+  }
+  return null;
+}
+
+/* ================= « décris ton shoot idéal » -> filtres ================= */
+const DESIRE_MAP = [
+  { label: 'brume matinale', syn: ['brume','brouillard','matinal'], cats: ['lac','riviere','foret','nature','point-de-vue','moulin'], groups: ['eau','foret','nature'], moment: 'lever',
+    tip: 'Brume : vise le lever du jour près de l\'eau ou en campagne, surtout après une nuit claire et humide.' },
+  { label: 'néons / nuit', syn: ['neon','nuit','lampadaire','nocturne'], cats: ['parking','urbain','quai','pont'], groups: ['parking','quai','pont'], moment: 'nuit',
+    tip: 'Nuit : parkings silo éclairés, quais et ponts — trépied et sol mouillé démultiplient les néons.' },
+  { label: 'béton brut', syn: ['beton','brut','minimal','graphique'], cats: ['parking','urbain','pont','silo','cheminee','barrage'], groups: ['parking','pont','silo'] },
+  { label: 'rouille / indus', syn: ['rouille','indus','usine','tole','friche'], cats: ['industriel','friche','silo','cheminee','gare','carriere'], groups: ['friche','silo','carriere'] },
+  { label: 'reflets / eau', syn: ['reflet','eau','riviere','canal','lac'], cats: ['lac','quai','riviere','barrage','pont','moulin'], groups: ['eau','quai','pont'] },
+  { label: 'forêt / verdure', syn: ['foret','arbre','bois','verdure','feuillage'], cats: ['foret','chemin','nature'], groups: ['foret','nature'] },
+  { label: 'panorama', syn: ['vue','panorama','hauteur','horizon'], cats: ['point-de-vue','nature'], groups: ['point_de_vue','nature'] },
+  { label: 'campagne', syn: ['campagne','rural','champ','ble','tournesol'], cats: ['nature','moulin','chateau','chateau-deau'], groups: ['nature','patrimoine','chateau_deau'] },
+  { label: 'prestige / domaine', syn: ['chateau','domaine','prestige','elegant'], cats: ['chateau','patrimoine'], groups: ['patrimoine'] },
+  { label: 'être seul', syn: ['seul','personne','desert','calme','tranquille'], lonely: true,
+    tip: 'Pour être seul : vise le lever du jour (ville vide) ou les zones commerciales le dimanche matin.' },
+  { label: 'sol mouillé', syn: ['mouille','pluie','flaque','humide'], wet: true,
+    tip: 'Sol mouillé : shoote juste après la pluie (regarde la météo ci-dessous) — reflets garantis au sol.' }
+];
+function parseDesire(text){
+  const t = ' ' + normalize(text) + ' ';
+  const cats = new Set(), groups = new Set(), tips = [], labels = [];
+  let moment = null;
+  DESIRE_MAP.forEach(d => {
+    if(!d.syn.some(sy => t.includes(normalize(sy)))) return;
+    labels.push(d.label);
+    (d.cats || []).forEach(c => cats.add(c));
+    (d.groups || []).forEach(g => groups.add(g));
+    if(d.moment && !moment) moment = d.moment;
+    if(d.tip) tips.push(d.tip);
+  });
+  if(!labels.length) return null;
+  return { labels, cats: [...cats], groups: [...groups], moment, tips };
+}
+
+/* ================= catégories OSM ================= */
+const OVERPASS_GROUPS = {
+  parking: ['["amenity"="parking"]'],
+  quai: ['["man_made"="quay"]','["man_made"="pier"]','["waterway"="dock"]'],
+  pont: ['["man_made"="bridge"]'],
+  chateau_deau: ['["man_made"="water_tower"]'],
+  silo: ['["man_made"="silo"]','["man_made"="storage_tank"]','["man_made"="chimney"]'],
+  carriere: ['["landuse"="quarry"]'],
+  barrage: ['["waterway"="dam"]'],
+  point_de_vue: ['["tourism"="viewpoint"]','["natural"="peak"]'],
+  patrimoine: ['["historic"="castle"]','["historic"="manor"]','["tourism"="artwork"]'],
+  friche: ['["historic"="ruins"]','["ruins"="yes"]','["abandoned"="yes"]','["disused"="yes"]'],
+  nature: ['["natural"="peak"]','["tourism"="viewpoint"]','["highway"="track"]'],
+  eau: ['["natural"="water"]','["water"="lake"]','["waterway"="dam"]'],
+  foret: ['["landuse"="forest"]','["natural"="wood"]']
+};
+// Défaut orienté "vraiment exploitable en voiture" : parkings + quais + patrimoine/nature selon le style.
+// Les friches OSM (souvent de simples tags sans intérêt) et les points de vue urbains (terrasses piétonnes)
+// ne sont PAS dans le défaut — friches en opt-in via le champ type "friche".
+const STYLE_GROUPS = {
+  sport: ['parking','quai','pont','chateau_deau','silo'],
+  urbain: ['parking','patrimoine','quai','pont','chateau_deau'],
+  youngtimer: ['patrimoine','parking','quai','pont','chateau_deau'],
+  '4x4': ['nature','point_de_vue','carriere','barrage','chateau_deau'],
+  americaine: ['point_de_vue','nature','parking','chateau_deau','silo'],
+  mixte: ['parking','patrimoine','quai','pont','chateau_deau','silo']
+};
+const CAT_COLORS = { 'point-de-vue':'#2e7d32','chateau':'#6a1b9a','lac':'#0277bd','cascade':'#0097a7','pont':'#5d4037',
+  'friche':'#e07b00','industriel':'#8d6e63','patrimoine':'#7b1fa2','eglise':'#455a64','foret':'#33691e','plage':'#00838f',
+  'carriere':'#795548','barrage':'#0277bd','moulin':'#795548','phare':'#c62828','chemin':'#8d6e63','parking':'#546e7a',
+  'street-art':'#ad1457','riviere':'#0288d1','gare':'#455a64','aerodrome':'#546e7a','tunnel':'#424242','eolienne':'#00897b',
+  'route':'#ef6c00','urbain':'#546e7a','nature':'#2e7d32','industriel':'#8d6e63','quai':'#00695c',
+  'chateau-deau':'#3949ab','silo':'#6d4c41','cheminee':'#455a64','repere':'#d81b60',
+  'lavage':'#00acc1','station':'#f4511e','ecluse':'#00838f','tournesol':'#f9a825','bastide':'#8e24aa','circuit':'#d32f2f',
+  'mixte':'#757575','autre':'#757575' };
+function categoryInfo(tags){
+  const keys = Object.keys(tags);
+  if(keys.some(k => /^(abandoned|disused)/.test(k)) || tags.ruins === 'yes' || tags.historic === 'ruins')
+    return { name: tags.name || 'Friche / lieu abandonné', label: 'Friche / abandonné', slug: 'friche' };
+  if(tags.man_made === 'works' || tags.landuse === 'industrial' || tags.building === 'industrial')
+    return { name: tags.name || 'Zone industrielle', label: 'Zone industrielle (souvent clôturée)', slug: 'industriel' };
+  if(tags.tourism === 'viewpoint' || tags.natural === 'peak') return { name: tags.name || 'Point de vue / hauteur', label: 'Point de vue', slug: 'point-de-vue' };
+  if(tags.amenity === 'parking' || tags.parking){
+    const lab = tags.parking === 'multi-storey' ? 'Parking (silo)' : tags.parking === 'rooftop' ? 'Parking (rooftop)' : 'Parking';
+    return { name: tags.name || lab, label: lab, slug: 'parking' };
+  }
+  if(tags.man_made === 'quay' || tags.man_made === 'pier' || tags.waterway === 'dock') return { name: tags.name || 'Quai / dock', label: 'Quai / dock', slug: 'quai' };
+  if(tags.tourism === 'artwork') return { name: tags.name || 'Street art', label: 'Street art', slug: 'street-art' };
+  if(tags.natural === 'water' || tags.water === 'lake') return { name: tags.name || 'Lac / plan d\'eau', label: 'Lac / eau', slug: 'lac' };
+  if(tags.building === 'church' || tags.building === 'chapel' || tags.amenity === 'place_of_worship') return { name: tags.name || 'Église / lieu de culte', label: 'Église', slug: 'eglise' };
+  if(tags.historic === 'castle' || tags.historic === 'manor' || tags.historic === 'fort') return { name: tags.name || 'Château / manoir', label: 'Château', slug: 'chateau' };
+  if(tags.man_made === 'bridge' || tags.bridge === 'yes' || tags.building === 'bridge') return { name: tags.name || 'Pont / viaduc', label: 'Pont / viaduc', slug: 'pont' };
+  if(tags.man_made === 'water_tower') return { name: tags.name || 'Château d\'eau', label: 'Château d\'eau', slug: 'chateau-deau' };
+  if(tags.man_made === 'silo' || tags.man_made === 'storage_tank') return { name: tags.name || 'Silo / réservoir', label: 'Silo / réservoir', slug: 'silo' };
+  if(tags.man_made === 'chimney') return { name: tags.name || 'Cheminée industrielle', label: 'Cheminée', slug: 'cheminee' };
+  if(tags.man_made === 'lighthouse') return { name: tags.name || 'Phare', label: 'Phare', slug: 'phare' };
+  if(tags.landuse === 'forest' || tags.natural === 'wood') return { name: tags.name || 'Forêt / bois', label: 'Forêt', slug: 'foret' };
+  if(tags.natural === 'beach') return { name: tags.name || 'Plage / rive', label: 'Plage', slug: 'plage' };
+  if(tags.landuse === 'quarry') return { name: tags.name || 'Carrière', label: 'Carrière', slug: 'carriere' };
+  if(tags.waterway === 'dam' || tags.man_made === 'dyke') return { name: tags.name || 'Barrage', label: 'Barrage', slug: 'barrage' };
+  if(tags.man_made === 'watermill' || tags.man_made === 'windmill' || tags.building === 'watermill') return { name: tags.name || 'Moulin', label: 'Moulin', slug: 'moulin' };
+  if(tags.waterway === 'river' || tags.waterway === 'canal') return { name: tags.name || 'Rivière / canal', label: 'Rivière', slug: 'riviere' };
+  if(tags.railway === 'station' || tags.building === 'train_station' || keys.some(k => k.startsWith('disused:railway'))) return { name: tags.name || 'Gare / voie ferrée', label: 'Ferroviaire', slug: 'gare' };
+  if(tags.aeroway) return { name: tags.name || 'Aérodrome / piste', label: 'Aérodrome', slug: 'aerodrome' };
+  if(tags['generator:source'] === 'wind') return { name: tags.name || 'Éolienne', label: 'Éolienne', slug: 'eolienne' };
+  if(tags.tunnel === 'yes') return { name: tags.name || 'Tunnel', label: 'Tunnel', slug: 'tunnel' };
+  if(tags.historic) return { name: tags.name || 'Lieu historique', label: 'Patrimoine', slug: 'patrimoine' };
+  if(tags.natural === 'cliff') return { name: tags.name || 'Falaise', label: 'Nature', slug: 'nature' };
+  if(tags.waterway === 'waterfall') return { name: tags.name || 'Cascade', label: 'Cascade', slug: 'cascade' };
+  if(tags.highway === 'track') return { name: tags.name || 'Chemin / piste', label: 'Chemin', slug: 'chemin' };
+  return { name: tags.name || 'Spot potentiel', label: 'Autre', slug: 'autre' };
+}
+
+/* ================= type de lieu optionnel ================= */
+const TYPE_TAGS = [
+  { label: 'Route sinueuse / en balcon', syn: ['route','sinueuse','virage','col','lacet','balcon'], scenic: true },
+  { label: 'Château d\'eau', syn: ['chateau d eau','chateau-d-eau','water tower','tour d eau'], filters: ['["man_made"="water_tower"]'] },
+  { label: 'Silo / réservoir', syn: ['silo','citerne','cuve','reservoir'], filters: ['["man_made"="silo"]','["man_made"="storage_tank"]'] },
+  { label: 'Cheminée industrielle', syn: ['cheminee'], filters: ['["man_made"="chimney"]'] },
+  { label: 'Lac / plan d\'eau', syn: ['lac','etang','plan d','plan-d'], filters: ['["natural"="water"]','["water"="lake"]'] },
+  { label: 'Église / lieu de culte', syn: ['eglise','chapelle','cathedrale','basilique','abbaye','culte'], filters: ['["building"="church"]','["amenity"="place_of_worship"]','["building"="chapel"]'] },
+  { label: 'Château / manoir', syn: ['chateau','manoir','forteresse'], filters: ['["historic"="castle"]','["historic"="manor"]','["historic"="fort"]'] },
+  { label: 'Cascade', syn: ['cascade','chute d','chute-d'], filters: ['["waterway"="waterfall"]'] },
+  { label: 'Pont / viaduc', syn: ['pont','viaduc'], filters: ['["man_made"="bridge"]','["bridge"="yes"]','["building"="bridge"]'] },
+  { label: 'Phare', syn: ['phare'], filters: ['["man_made"="lighthouse"]'] },
+  { label: 'Forêt / bois', syn: ['foret','bois','sous-bois','sous bois'], filters: ['["landuse"="forest"]','["natural"="wood"]'] },
+  { label: 'Plage / rive', syn: ['plage','rive','berge'], filters: ['["natural"="beach"]'] },
+  { label: 'Carrière', syn: ['carriere','gravier'], filters: ['["landuse"="quarry"]'] },
+  { label: 'Barrage', syn: ['barrage','digue'], filters: ['["waterway"="dam"]','["man_made"="dyke"]'] },
+  { label: 'Moulin', syn: ['moulin'], filters: ['["man_made"="watermill"]','["man_made"="windmill"]','["building"="watermill"]'] },
+  { label: 'Rivière / canal', syn: ['riviere','fleuve','canal','ruisseau'], filters: ['["waterway"="river"]','["waterway"="canal"]'] },
+  { label: 'Gare / voie ferrée', syn: ['gare','ferroviaire','train','voie ferree','chemin de fer'], filters: ['["railway"="station"]','["building"="train_station"]','["disused:railway"]'] },
+  { label: 'Aérodrome / piste', syn: ['aerodrome','aeroport','avion'], filters: ['["aeroway"="aerodrome"]','["aeroway"="runway"]'] },
+  { label: 'Point de vue / panorama', syn: ['point de vue','vue','panorama','belvedere','sommet','colline','montagne'], filters: ['["tourism"="viewpoint"]','["natural"="peak"]'] },
+  { label: 'Friche / lieu abandonné', syn: ['friche','abandonne','ruine','ruines','desaffecte'], filters: ['["historic"="ruins"]','["ruins"="yes"]','["abandoned"="yes"]','["disused"="yes"]','["man_made"="works"]'] },
+  { label: 'Parking', syn: ['parking','rooftop','toit'], filters: ['["amenity"="parking"]'] },
+  { label: 'Quai / dock', syn: ['quai','dock','port','ponton','berge'], filters: ['["man_made"="quay"]','["man_made"="pier"]','["waterway"="dock"]'] },
+  { label: 'Industriel / usine', syn: ['industriel','usine','zone industrielle','hangar','entrepot'], filters: ['["man_made"="works"]','["landuse"="industrial"]','["building"="industrial"]'] },
+  { label: 'Tunnel', syn: ['tunnel'], filters: ['["tunnel"="yes"]'] },
+  { label: 'Lavage auto', syn: ['lavage','car wash','carwash'], filters: ['["amenity"="car_wash"]'] },
+  { label: 'Station-service', syn: ['station-service','station service','essence','pompe'], filters: ['["amenity"="fuel"]'] },
+  { label: 'Écluse (Canal du Midi)', syn: ['ecluse'], filters: ['["lock"="yes"]','["waterway"="lock_gate"]'] },
+  { label: 'Éolienne', syn: ['eolienne','eolien'], filters: ['["generator:source"="wind"]'] }
+];
+function parseType(text){
+  const t = normalize(text);
+  for(const entry of TYPE_TAGS){
+    if(entry.syn.some(syn => t.includes(normalize(syn)))) return { label: entry.label, filters: entry.filters, scenic: !!entry.scenic };
+  }
+  return null;
+}
+
+/* ================= Overpass ================= */
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter'
+];
+async function overpassFetch(q){
+  let lastErr;
+  for(const ep of OVERPASS_ENDPOINTS){
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 30000);
+      const resp = await fetch(ep, { method: 'POST', body: q, signal: ctrl.signal });
+      clearTimeout(timer);
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      const text = await resp.text();
+      let data; try { data = JSON.parse(text); } catch { throw new Error('serveur occupé'); }
+      return data;                       // premier serveur qui répond
+    } catch(e){ lastErr = e; }           // sinon serveur suivant
+  }
+  throw lastErr || new Error('Overpass indisponible');
+}
+const ROAD_DIST = 80; // m : distance max à une route carrossable pour être "accessible en voiture"
+const DRIVABLE = 'motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|track|road';
+function buildOverpass(style, radius, typeFilters, carOnly){
+  let uniq;
+  if(typeFilters && typeFilters.length){
+    uniq = [...new Set(typeFilters)];
+  } else {
+    const groups = STYLE_GROUPS[style] || STYLE_GROUPS.mixte;
+    const filters = [];
+    groups.forEach(g => OVERPASS_GROUPS[g].forEach(f => filters.push(f)));
+    uniq = [...new Set(filters)];
+  }
+  const cand = uniq.map(f => `nwr(around:${radius},${CENTER[0]},${CENTER[1]})${f};`).join('\n');
+  if(carOnly){
+    // on ne garde que les candidats à moins de ROAD_DIST d'une route carrossable
+    return `[out:json][timeout:30];
+way(around:${radius},${CENTER[0]},${CENTER[1]})["highway"~"^(${DRIVABLE})$"]->.roads;
+(
+${cand}
+)->.cand;
+(
+  node.cand(around.roads:${ROAD_DIST});
+  way.cand(around.roads:${ROAD_DIST});
+  relation.cand(around.roads:${ROAD_DIST});
+);
+out center 120;`;
+  }
+  return `[out:json][timeout:25];\n(\n${cand}\n);\nout center 120;`;
+}
+function isPrivate(tags){ return tags.access === 'private' || tags.access === 'no' || tags.access === 'permit'; }
+function parseOverpass(data){
+  const seen = new Set(), out = [];
+  (data.elements || []).forEach(el => {
+    const c = el.type === 'node' ? { lat: el.lat, lng: el.lon }
+            : (el.center ? { lat: el.center.lat, lng: el.center.lon } : null);
+    if(!c) return;
+    const key = el.type + el.id;
+    if(seen.has(key)) return; seen.add(key);
+    const tags = el.tags || {};
+    const info = categoryInfo(tags);
+    out.push({ lat: c.lat, lng: c.lng, name: info.name, catLabel: info.label, catSlug: info.slug,
+               named: !!tags.name, private: isPrivate(tags), direction: tags.direction,
+               dist: haversine(CENTER[0], CENTER[1], c.lat, c.lng) });
+  });
+  return out;
+}
+// tri par pertinence + dédoublonnage des lieux quasi identiques
+const CAT_WEIGHT = { 'parking':3,'quai':3,'point-de-vue':3,'chateau':3,'cascade':3,'phare':3,'friche':3,'chateau-deau':2,'silo':2,'cheminee':2,'lac':2,'pont':2,'patrimoine':2,
+  'plage':2,'barrage':2,'moulin':2,'street-art':2,'route':2,'tournesol':3,'circuit':3,'bastide':2,'lavage':2,'station':2,'ecluse':2,'foret':1,'eglise':1,'chemin':1,
+  'riviere':1,'gare':1,'aerodrome':1,'tunnel':1,'eolienne':1,'carriere':1,'nature':1,'industriel':0,'autre':0 };
+function rankAndDedupe(list){
+  list.sort((a,b) => a.dist - b.dist);
+  const kept = [];
+  for(const s of list){
+    if(kept.some(k => haversine(k.lat, k.lng, s.lat, s.lng) < 0.06)) continue; // < 60 m => doublon
+    kept.push(s);
+  }
+  kept.forEach(s => { s.score = (s.named ? 3 : 0) + (CAT_WEIGHT[s.catSlug] || 0) - Math.min(s.dist, 50)/25; });
+  kept.sort((a,b) => b.score - a.score || a.dist - b.dist);
+  return kept.slice(0, 30);
+}
+async function queryOverpass(style, radius, typeFilters, carOnly){
+  const data = await overpassFetch(buildOverpass(style, radius, typeFilters, carOnly));
+  return rankAndDedupe(parseOverpass(data));
+}
+// routes sinueuses : on récupère la géométrie et on calcule la sinuosité (longueur / distance à vol d'oiseau)
+async function queryScenicRoads(radius){
+  const q = `[out:json][timeout:25];way(around:${radius},${CENTER[0]},${CENTER[1]})["highway"~"^(secondary|tertiary|unclassified)$"];out geom 600;`;
+  const data = await overpassFetch(q);
+  const roads = [];
+  (data.elements || []).forEach(w => {
+    const g = w.geometry; if(!g || g.length < 4) return;
+    let len = 0;
+    for(let i = 1; i < g.length; i++) len += haversine(g[i-1].lat, g[i-1].lon, g[i].lat, g[i].lon);
+    const straight = haversine(g[0].lat, g[0].lon, g[g.length-1].lat, g[g.length-1].lon);
+    if(straight < 0.2 || len < 1 || len > 20) return;
+    const sinu = len / straight;
+    if(sinu < 1.35) return;
+    const mid = g[Math.floor(g.length/2)];
+    const q1 = g[Math.floor(g.length/4)], q3 = g[Math.floor(3*g.length/4)];
+    roads.push({ lat: mid.lat, lng: mid.lon,
+      name: (w.tags && w.tags.name) || 'Route sinueuse', named: !!(w.tags && w.tags.name),
+      catLabel: `Route sinueuse — ${len.toFixed(1)} km, sinuosité ${sinu.toFixed(2)}`, catSlug: 'route',
+      private: false, direction: null, dist: haversine(CENTER[0], CENTER[1], mid.lat, mid.lon), sinu,
+      _samples: [[g[0].lat, g[0].lon], [q1.lat, q1.lon], [mid.lat, mid.lon], [q3.lat, q3.lon], [g[g.length-1].lat, g[g.length-1].lon]] });
+  });
+  roads.sort((a,b) => b.sinu - a.sinu);
+  const top = roads.slice(0, 25);
+  // enrichissement altitude (Open-Meteo Elevation, gratuit) : dénivelé le long de la route -> score « balcon »
+  try {
+    const pts = [];
+    top.forEach(r => { r._samples.forEach(p => pts.push(p)); });
+    const lats = pts.map(p => p[0].toFixed(5)).join(',');
+    const lngs = pts.map(p => p[1].toFixed(5)).join(',');
+    const resp = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lngs}`);
+    const elev = (await resp.json()).elevation || [];
+    let k = 0;
+    top.forEach(r => {
+      const es = r._samples.map(() => elev[k++]).filter(e => typeof e === 'number');
+      if(es.length >= 2){
+        r.elevRange = Math.round(Math.max(...es) - Math.min(...es));
+        r.elevMax = Math.round(Math.max(...es));
+        if(r.elevRange >= 25) r.catLabel += ` · ↗ ${r.elevRange} m de dénivelé (balcon)`;
+        else r.catLabel += ` · plat`;
+      }
+    });
+    top.sort((a,b) => (b.sinu * (1 + (b.elevRange || 0) / 80)) - (a.sinu * (1 + (a.elevRange || 0) / 80)));
+  } catch(e) { /* altitude indisponible : on garde le tri par sinuosité */ }
+  top.forEach(r => delete r._samples);
+  return top.slice(0, 20);
+}
+
+/* ================= vignette satellite du lieu (vue aérienne réelle, sans biais) ================= */
+const thumbObserver = ('IntersectionObserver' in window)
+  ? new IntersectionObserver((entries, obs) => {
+      entries.forEach(en => { if(en.isIntersecting){ obs.unobserve(en.target); loadThumb(en.target); } });
+    }, { rootMargin: '200px' })
+  : null;
+function merc(lat, lng){ const R = 6378137; return { x: R * lng * Math.PI / 180, y: R * Math.log(Math.tan(Math.PI/4 + lat * Math.PI/360)) }; }
+function satUrl(lat, lng, w, h, halfWidthM){
+  const c = merc(lat, lng), hw = halfWidthM, hh = halfWidthM * h / w;
+  const bbox = [c.x - hw, c.y - hh, c.x + hw, c.y + hh].join(',');
+  return 'https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export'
+    + `?bbox=${bbox}&bboxSR=3857&imageSR=3857&size=${w},${h}&format=jpg&f=image`;
+}
+function loadThumb(wrap){
+  const lat = +wrap.dataset.lat, lng = +wrap.dataset.lng;
+  const img = new Image(); img.loading = 'lazy'; img.alt = 'vue satellite du lieu';
+  img.onerror = () => wrap.remove();
+  img.src = satUrl(lat, lng, 320, 150, 250); // vue ~500 m de large centrée sur le spot
+  wrap.appendChild(img);
+  const dot = document.createElement('span'); dot.className = 'thumb-dot';
+  dot.style.left = '50%'; dot.style.top = '50%';
+  wrap.appendChild(dot); // point rouge = position exacte du spot (centre)
+}
+
+/* ================= rendu résultats ================= */
+function baseMatches(style){
+  if(!style || style === 'mixte') return SPOTS.slice();
+  return SPOTS.filter(s => s.car_styles.includes(style));
+}
+function makeActions(container, sp){
+  container.appendChild(earthLink(sp.lat, sp.lng));
+  container.appendChild(mapsLink(sp.lat, sp.lng));
+  const save = document.createElement('button'); save.className = 'ghost'; save.textContent = '💾 Enregistrer';
+  save.addEventListener('click', e => { e.stopPropagation(); saveSpot(sp); });
+  container.appendChild(save);
+  const cp = document.createElement('button'); cp.className = 'ghost'; cp.textContent = 'Copier JSON';
+  cp.addEventListener('click', e => { e.stopPropagation();
+    copySpot({ name: sp.name, lat: sp.lat, lng: sp.lng, category: sp.category, car_styles: sp.car_styles || [], description: sp.label }); });
+  container.appendChild(cp);
+}
+function renderBase(style, cats){
+  let list = baseMatches(style);
+  if(cats && cats.length) list = list.filter(s => cats.includes(s.category));
+  BASE_PTS = [];
+  const box = document.getElementById('base-results');
+  box.innerHTML = list.length ? '' : '<p class="muted">Aucun spot de ta base pour ce style.</p>';
+  list.forEach(s => {
+    const el = document.createElement('div'); el.className = 'card';
+    const body = document.createElement('div');
+    body.innerHTML = `<h3>${escapeHtml(s.name)}</h3><p>${escapeHtml(s.description)}</p><p class="muted">${escapeHtml(s.access)}</p>
+      <p><span class="badge" style="background:${CAT_COLORS[s.category] || '#757575'}">${escapeHtml(s.category)}</span>${carBadge(s)} <span class="muted">${escapeHtml(s.best_moment)}</span></p>`;
+    el.appendChild(body);
+    if(typeof s.lat === 'number' && typeof s.lng === 'number'){
+      const actions = document.createElement('div');
+      makeActions(actions, { name: s.name, lat: s.lat, lng: s.lng, category: s.category, label: s.category, car_styles: s.car_styles });
+      el.appendChild(actions);
+      addMarker(baseLayer, s.lat, s.lng, '#1a1a1a', `<b>${escapeHtml(s.name)}</b><br>${escapeHtml(s.description)}`);
+      BASE_PTS.push([s.lat, s.lng]);
+    }
+    el.addEventListener('click', () => { if(s.lat && s.lng) map.setView([s.lat, s.lng], 15); });
+    box.appendChild(el);
+  });
+}
+function catCounts(spots){
+  const m = new Map();
+  spots.forEach(s => {
+    if(!m.has(s.catSlug)) m.set(s.catSlug, { slug: s.catSlug, label: s.catLabel, count: 0, color: CAT_COLORS[s.catSlug] || '#757575' });
+    m.get(s.catSlug).count++;
+  });
+  return [...m.values()].sort((a,b) => b.count - a.count);
+}
+function renderDiscoFilters(){
+  const box = document.getElementById('disco-filters');
+  box.innerHTML = '';
+  const cats = catCounts(ALL_DISCO);
+  if(cats.length <= 1) return;   // pas de filtre utile si une seule catégorie
+  const lbl = document.createElement('span'); lbl.className = 'muted'; lbl.textContent = 'Filtrer : '; box.appendChild(lbl);
+  cats.forEach(c => {
+    const b = document.createElement('button'); b.className = 'chip' + (ACTIVE_CATS.has(c.slug) ? ' on' : '');
+    b.innerHTML = `<span class="dot" style="background:${c.color}"></span>${escapeHtml(c.label)} (${c.count})`;
+    b.onclick = () => { ACTIVE_CATS.has(c.slug) ? ACTIVE_CATS.delete(c.slug) : ACTIVE_CATS.add(c.slug); renderDiscoFilters(); drawDisco(); };
+    box.appendChild(b);
+  });
+  const all = document.createElement('button'); all.className = 'chip'; all.textContent = '✓ Tout';
+  all.onclick = () => { cats.forEach(c => ACTIVE_CATS.add(c.slug)); renderDiscoFilters(); drawDisco(); }; box.appendChild(all);
+  const none = document.createElement('button'); none.className = 'chip'; none.textContent = '✗ Aucun';
+  none.onclick = () => { ACTIVE_CATS.clear(); renderDiscoFilters(); drawDisco(); }; box.appendChild(none);
+}
+function discoCard(s){
+  const el = document.createElement('div'); el.className = 'card';
+  const wrap = document.createElement('div'); wrap.className = 'thumb-wrap'; wrap.dataset.lat = s.lat; wrap.dataset.lng = s.lng;
+  el.appendChild(wrap);
+  if(thumbObserver) thumbObserver.observe(wrap); else loadThumb(wrap);
+  const color = CAT_COLORS[s.catSlug] || '#757575';
+  const priv = s.private ? ' <span class="warnbadge">⚠ accès privé probable</span>' : '';
+  const orient = (s.catSlug === 'point-de-vue' && DISCO_SUNAZ) ? orientHint(dirToDeg(s.direction), DISCO_SUNAZ.rise, DISCO_SUNAZ.set) : '';
+  const body = document.createElement('div');
+  body.innerHTML = `<h3>${escapeHtml(s.name)}${priv}</h3>
+    <p><span class="badge" style="background:${color}">${escapeHtml(s.catLabel)}</span>
+       <span class="muted">${s.dist.toFixed(1)} km · ${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</span></p>
+    ${orient ? `<p class="muted">${orient}</p>` : ''}`;
+  el.appendChild(body);
+  const actions = document.createElement('div');
+  makeActions(actions, { name: s.name, lat: s.lat, lng: s.lng, category: s.catSlug, label: s.catLabel, car_styles: DISCO_STYLE });
+  el.appendChild(actions);
+  el.addEventListener('click', () => map.setView([s.lat, s.lng], 15));
+  return el;
+}
+function drawDisco(){
+  const box = document.getElementById('disco-results');
+  discoLayer.clearLayers();
+  if(!ALL_DISCO.length){
+    box.innerHTML = '<p class="muted">Aucun lieu trouvé dans ce rayon. Essaie un rayon plus grand, un autre type, ou décoche « accessible en voiture ».</p>';
+    fitAll(); return;
+  }
+  const spots = ALL_DISCO.filter(s => ACTIVE_CATS.has(s.catSlug));
+  box.innerHTML = `<p class="muted"><b>${spots.length}</b> / ${ALL_DISCO.length} lieu(x) affiché(s), triés par intérêt.</p>`;
+  const pts = BASE_PTS.slice();
+  spots.forEach(s => {
+    box.appendChild(discoCard(s));
+    addMarker(discoLayer, s.lat, s.lng, CAT_COLORS[s.catSlug] || '#757575', `<b>${escapeHtml(s.name)}</b><br>${escapeHtml(s.catLabel)}`);
+    pts.push([s.lat, s.lng]);
+  });
+  if(pts.length) map.fitBounds(pts, { padding: [40, 40], maxZoom: 14 });
+}
+function renderDiscovered(spots, style, sunAz){
+  ALL_DISCO = spots;
+  DISCO_STYLE = (style === 'mixte') ? [] : [style];
+  DISCO_SUNAZ = sunAz;
+  ACTIVE_CATS = new Set(spots.map(s => s.catSlug));
+  renderDiscoFilters();
+  drawDisco();
+}
+
+async function findSpots(){
+  const text = document.getElementById('car-input').value.trim();
+  const typeText = document.getElementById('type-input').value.trim();
+  const desireText = document.getElementById('desire-input').value.trim();
+  const radius = parseInt(document.getElementById('radius-select').value, 10);
+  if(!text && !typeText && !desireText){ document.getElementById('detected').innerHTML = '<div class="banner info">Décris ta voiture (ex : « 718 bleu »), un type de lieu (ex : « lac ») et/ou ton envie (ex : « brume, béton brut »).</div>'; return; }
+  const cls = classifyCar(text);
+  const color = detectColor(text);
+  const typeInfo = typeText ? parseType(typeText) : null;
+  const desire = desireText ? parseDesire(desireText) : null;
+  const carOnly = document.getElementById('car-access').checked;
+  let banner = `<b>Style détecté : ${escapeHtml(cls.label)}</b>${cls.matched ? '' : ' — modèle non reconnu, recherche large'}`;
+  if(color) banner += '<br>' + escapeHtml(color.tip);
+  if(typeText){
+    banner += typeInfo
+      ? `<br>Type ciblé : <b>${escapeHtml(typeInfo.label)}</b>`
+      : `<br>Type « ${escapeHtml(typeText)} » non reconnu — recherche selon le style. Types gérés : route, balcon, lac, église, château, cascade, pont, phare, forêt, plage, carrière, barrage, moulin, rivière, gare, point de vue, friche, parking, tunnel…`;
+  }
+  if(desireText){
+    if(desire){
+      banner += `<br>🎨 Envie comprise : <b>${desire.labels.map(escapeHtml).join(', ')}</b>`;
+      if(desire.moment) banner += ` — vise plutôt le <b>${desire.moment === 'lever' ? 'lever du jour' : desire.moment}</b>`;
+      desire.tips.forEach(t => { banner += '<br>💡 ' + escapeHtml(t); });
+    } else {
+      banner += `<br>🎨 Envie « ${escapeHtml(desireText)} » non comprise — mots gérés : brume, néon/nuit, béton, rouille, reflets, forêt, panorama, campagne, château, être seul, sol mouillé.`;
+    }
+  }
+  banner += `<br>🚗 ${carOnly ? `Accessible en voiture : <b>filtré</b> (≤ ${ROAD_DIST} m d'une route)` : 'Filtre voiture <b>désactivé</b>'}`;
+  document.getElementById('detected').innerHTML = `<div class="banner info">${banner}</div>`;
+
+  const dateStr = document.getElementById('date-input').value;
+  const date = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
+  const times = SunCalc.getTimes(date, CENTER[0], CENTER[1]);
+  const sunAz = { rise: sunAzDeg(times.sunrise), set: sunAzDeg(times.sunset) };
+
+  resetMap();
+  renderBase(cls.style, desire ? desire.cats : null);
+  document.getElementById('disco-filters').innerHTML = '';
+  const disco = document.getElementById('disco-results');
+  disco.innerHTML = '<p class="muted">Recherche de lieux réels autour de Balma (quelques secondes)…</p>';
+  // priorité des filtres de découverte : type explicite > envie > style de voiture
+  let discoFilters = typeInfo ? typeInfo.filters : null;
+  if(!discoFilters && desire && desire.groups.length){
+    const fs = [];
+    desire.groups.forEach(g => (OVERPASS_GROUPS[g] || []).forEach(f => fs.push(f)));
+    if(fs.length) discoFilters = [...new Set(fs)];
+  }
+  try {
+    const spots = (typeInfo && typeInfo.scenic)
+      ? await queryScenicRoads(radius)
+      : await queryOverpass(cls.style, radius, discoFilters, carOnly);
+    renderDiscovered(spots, cls.style, sunAz);
+  } catch(e){
+    disco.innerHTML = '<p class="muted">Recherche OpenStreetMap indisponible (serveur Overpass surchargé ou réseau). Réessaie dans un instant.</p>';
+    fitAll();
+  }
+}
+
+/* ================= planification : soleil + météo ================= */
+let WEATHER_HTML = '';
+const WMO = { 0:['☀️','ciel clair'],1:['🌤️','plutôt clair'],2:['⛅','partiellement nuageux'],3:['☁️','couvert'],
+  45:['🌫️','brouillard'],48:['🌫️','brouillard givrant'],51:['🌦️','bruine'],53:['🌦️','bruine'],55:['🌦️','bruine'],
+  61:['🌧️','pluie'],63:['🌧️','pluie'],65:['🌧️','forte pluie'],71:['🌨️','neige'],73:['🌨️','neige'],75:['🌨️','forte neige'],
+  80:['🌦️','averses'],81:['🌦️','averses'],82:['⛈️','fortes averses'],95:['⛈️','orage'],96:['⛈️','orage'],99:['⛈️','orage'] };
+function fmtTime(d){ return isNaN(d) ? '—' : d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); }
+function renderPlanning(){
+  const dateStr = document.getElementById('date-input').value;
+  const date = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
+  const t = SunCalc.getTimes(date, CENTER[0], CENTER[1]);
+  const azR = isNaN(t.sunrise) ? '—' : compass(sunAzDeg(t.sunrise));
+  const azS = isNaN(t.sunset)  ? '—' : compass(sunAzDeg(t.sunset));
+  const ghM = isNaN(t.sunrise) ? null : new Date(t.sunrise.getTime() + 3600000);
+  const ghS = isNaN(t.sunset)  ? null : new Date(t.sunset.getTime() - 3600000);
+  const sun = `<div class="banner info"><b>☀️ Lumière — ${date.toLocaleDateString('fr-FR')}</b><br>
+    🌅 Lever ${fmtTime(t.sunrise)} (soleil ${azR}) · heure dorée ~ ${fmtTime(t.sunrise)}–${fmtTime(ghM)}<br>
+    🌇 Coucher ${fmtTime(t.sunset)} (soleil ${azS}) · heure dorée ~ ${fmtTime(ghS)}–${fmtTime(t.sunset)}</div>`;
+  document.getElementById('planning').innerHTML = sun + WEATHER_HTML;
+}
+async function loadWeather(){
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${CENTER[0]}&longitude=${CENTER[1]}`
+      + '&daily=weather_code,precipitation_probability_max,temperature_2m_max,cloud_cover_mean&timezone=auto&forecast_days=4';
+    const r = await fetch(url); const d = await r.json(); const dy = d.daily;
+    if(!dy) throw new Error('no data');
+    let cards = '';
+    for(let i = 0; i < dy.time.length; i++){
+      const [emo, lab] = WMO[dy.weather_code[i]] || ['❓', ''];
+      const cc = dy.cloud_cover_mean[i];
+      const light = cc < 30 ? 'lumière dorée nette' : cc < 70 ? 'lumière douce' : 'lumière plate';
+      const day = new Date(dy.time[i] + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+      cards += `<div class="wcard"><div class="wday">${day}</div><div class="wemo">${emo}</div>
+        <div class="muted">${lab}</div><div class="muted">${Math.round(dy.temperature_2m_max[i])}° · ☁️ ${cc}%</div>
+        <div class="muted">💧 ${dy.precipitation_probability_max[i]}%</div><div class="wlight">${light}</div></div>`;
+    }
+    WEATHER_HTML = `<div class="weather"><b>Météo &amp; lumière — prochains jours</b><div class="wrow">${cards}</div></div>`;
+  } catch(e){ WEATHER_HTML = '<p class="muted">Météo indisponible pour le moment.</p>'; }
+  renderPlanning();
+}
+
+/* ================= mes spots (localStorage) ================= */
+const SAVED_KEY = 'spotphoto_saved_v1';
+let SAVED = (() => { try { return JSON.parse(localStorage.getItem(SAVED_KEY)) || []; } catch { return []; } })();
+function persistSaved(){ localStorage.setItem(SAVED_KEY, JSON.stringify(SAVED)); }
+
+/* -- dossiers / collections -- */
+const FOLDERS_KEY = 'spotphoto_folders_v1';
+let FOLDERS = (() => { try { return JSON.parse(localStorage.getItem(FOLDERS_KEY)) || []; } catch { return []; } })();
+function persistFolders(){ localStorage.setItem(FOLDERS_KEY, JSON.stringify(FOLDERS)); }
+function folderName(id){ const f = FOLDERS.find(x => x.id === id); return f ? f.name : ''; }
+function activeFolderVal(){ const el = document.getElementById('folder-filter'); return el ? el.value : ''; }
+function savedView(){
+  const f = activeFolderVal();
+  if(f === '') return SAVED.slice();
+  if(f === 'none') return SAVED.filter(s => !s.folder);
+  return SAVED.filter(s => s.folder === f);
+}
+function addFolder(){
+  const inp = document.getElementById('folder-name');
+  const name = inp.value.trim(); if(!name) return;
+  const id = 'f_' + Date.now().toString(36) + Math.floor(Math.random()*1000);
+  FOLDERS.push({ id, name }); persistFolders(); inp.value = '';
+  renderFolderFilter(id); renderSaved();
+}
+function renameFolder(id){
+  const f = FOLDERS.find(x => x.id === id); if(!f) return;
+  const name = prompt('Renommer le dossier :', f.name);
+  if(name && name.trim()){ f.name = name.trim(); persistFolders(); renderFolderFilter(id); renderSaved(); }
+}
+function removeFolder(id){
+  if(!confirm('Supprimer ce dossier ? Les spots qu\'il contient repassent en « Sans dossier ».')) return;
+  FOLDERS = FOLDERS.filter(x => x.id !== id);
+  SAVED.forEach(s => { if(s.folder === id) s.folder = ''; });
+  persistFolders(); persistSaved(); renderFolderFilter(''); renderSaved();
+}
+function renderFolderFilter(selectedId){
+  const el = document.getElementById('folder-filter');
+  const keep = (selectedId != null) ? selectedId : el.value;
+  let html = `<option value=""${keep===''?' selected':''}>Tous les dossiers</option>`;
+  html += `<option value="none"${keep==='none'?' selected':''}>(Sans dossier)</option>`;
+  FOLDERS.forEach(f => { html += `<option value="${f.id}"${keep===f.id?' selected':''}>${escapeHtml(f.name)}</option>`; });
+  el.innerHTML = html;
+}
+function cardFolderOptions(current){
+  let html = `<option value=""${!current?' selected':''}>— Sans dossier —</option>`;
+  FOLDERS.forEach(f => { html += `<option value="${f.id}"${current===f.id?' selected':''}>${escapeHtml(f.name)}</option>`; });
+  return html;
+}
+function saveSpot(sp){
+  const id = slugify(sp.name || 'spot') + '_' + (+sp.lat).toFixed(4) + '_' + (+sp.lng).toFixed(4);
+  if(SAVED.some(x => x.id === id)){ alert('Ce spot est déjà dans « Mes spots ».'); return; }
+  const active = activeFolderVal();
+  const folder = (active && active !== 'none') ? active : '';
+  SAVED.push({ id, name: sp.name || '', lat: +sp.lat, lng: +sp.lng, category: sp.category || 'autre',
+    label: sp.label || sp.category || '', rating: 0, favori: false, visite: false, note: '', folder });
+  persistSaved(); renderSaved();
+  document.getElementById('saved-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function updateSaved(id, patch){ const s = SAVED.find(x => x.id === id); if(s){ Object.assign(s, patch); persistSaved(); renderSaved(); } }
+function removeSaved(id){ SAVED = SAVED.filter(x => x.id !== id); persistSaved(); renderSaved(); }
+function savedCard(s){
+  const el = document.createElement('div'); el.className = 'card';
+  const head = document.createElement('h3'); head.textContent = (s.name || '(sans nom)') + (s.favori ? ' ⭐' : '') + (s.visite ? ' ✓' : '');
+  el.appendChild(head);
+  const meta = document.createElement('p');
+  meta.innerHTML = `<span class="badge" style="background:${CAT_COLORS[s.category] || '#757575'}">${escapeHtml(s.label || s.category)}</span> <span class="muted">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</span>`;
+  el.appendChild(meta);
+  const stars = document.createElement('p'); stars.className = 'stars';
+  for(let n = 1; n <= 5; n++){
+    const st = document.createElement('span'); st.className = 'star'; st.textContent = n <= s.rating ? '★' : '☆';
+    st.onclick = () => updateSaved(s.id, { rating: n === s.rating ? 0 : n });
+    stars.appendChild(st);
+  }
+  el.appendChild(stars);
+  const note = document.createElement('input'); note.className = 'note-input'; note.placeholder = 'note perso…'; note.value = s.note || '';
+  note.onchange = () => updateSaved(s.id, { note: note.value });
+  el.appendChild(note);
+  const fsel = document.createElement('select'); fsel.className = 'folder-select'; fsel.innerHTML = cardFolderOptions(s.folder || '');
+  fsel.onchange = () => updateSaved(s.id, { folder: fsel.value });
+  el.appendChild(fsel);
+  const fav = document.createElement('button'); fav.className = 'ghost'; fav.textContent = s.favori ? '⭐ Favori' : '☆ Favori';
+  fav.onclick = () => updateSaved(s.id, { favori: !s.favori }); el.appendChild(fav);
+  const vis = document.createElement('button'); vis.className = 'ghost'; vis.textContent = s.visite ? '✓ Visité' : 'Marquer visité';
+  vis.onclick = () => updateSaved(s.id, { visite: !s.visite }); el.appendChild(vis);
+  el.appendChild(earthLink(s.lat, s.lng));
+  el.appendChild(mapsLink(s.lat, s.lng));
+  const del = document.createElement('button'); del.className = 'ghost'; del.textContent = '🗑 Supprimer';
+  del.onclick = () => { if(confirm('Supprimer ce spot ?')) removeSaved(s.id); }; el.appendChild(del);
+  return el;
+}
+/* -- carte de Mes spots -- */
+let savedMap = null, savedLayer = null;
+function ensureSavedMap(){
+  if(savedMap){ setTimeout(() => savedMap.invalidateSize(), 60); updateSavedMap(); return; }
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
+  const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagerie &copy; Esri' });
+  savedMap = L.map('saved-map', { layers: [osm] }).setView(CENTER, 11);
+  L.control.layers({ 'Plan (OSM)': osm, 'Satellite (Esri)': sat }, null, { position: 'topright' }).addTo(savedMap);
+  savedLayer = L.layerGroup().addTo(savedMap);
+  updateSavedMap();
+}
+function updateSavedMap(){
+  if(!savedMap) return;
+  savedLayer.clearLayers();
+  const view = savedFiltered();
+  const pts = [];
+  view.forEach(s => {
+    const color = CAT_COLORS[s.category] || '#757575';
+    L.circleMarker([s.lat, s.lng], { radius: 8, color: color, fillColor: color, fillOpacity: 0.9, weight: 1 })
+      .bindPopup(`<b>${escapeHtml(s.name || '(sans nom)')}</b><br>${escapeHtml(s.label || s.category)}${s.note ? '<br><i>' + escapeHtml(s.note) + '</i>' : ''}${'★'.repeat(s.rating || 0)}`)
+      .addTo(savedLayer);
+    pts.push([s.lat, s.lng]);
+  });
+  if(pts.length) savedMap.fitBounds(pts, { padding: [30, 30], maxZoom: 14 });
+}
+
+function fillSavedCats(){
+  const sel = document.getElementById('saved-cat');
+  const keep = sel.value;
+  const cats = [...new Set(SAVED.map(s => s.category || 'autre'))].sort();
+  sel.innerHTML = '<option value="">Tous les types</option>'
+    + cats.map(c => `<option value="${c}"${c === keep ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
+}
+function savedFiltered(){
+  let list = savedView();
+  const cat = document.getElementById('saved-cat').value;
+  const flag = document.getElementById('saved-flag').value;
+  const sort = document.getElementById('saved-sort').value;
+  if(cat) list = list.filter(s => (s.category || 'autre') === cat);
+  if(flag === 'favori') list = list.filter(s => s.favori);
+  else if(flag === 'visite') list = list.filter(s => s.visite);
+  else if(flag === 'avisiter') list = list.filter(s => !s.visite);
+  if(sort === 'dist') list.sort((a,b) => haversine(CENTER[0], CENTER[1], a.lat, a.lng) - haversine(CENTER[0], CENTER[1], b.lat, b.lng));
+  else if(sort === 'nom') list.sort((a,b) => (a.name || '').localeCompare(b.name || '', 'fr'));
+  else if(sort === 'note') list.sort((a,b) => (b.rating || 0) - (a.rating || 0));
+  return list;
+}
+function renderSaved(){
+  const box = document.getElementById('saved-results');
+  const act = document.getElementById('saved-actions');
+  const fval = activeFolderVal();
+  fillSavedCats();
+  const view = savedFiltered();
+  act.innerHTML = '';
+  const info = document.createElement('span'); info.className = 'muted';
+  info.textContent = view.length + ' spot(s)'
+    + (fval && fval !== 'none' ? ' dans « ' + folderName(fval) + ' »' : fval === 'none' ? ' sans dossier' : '')
+    + (view.length ? ' — ' : '');
+  act.appendChild(info);
+  if(view.length){
+    const gpx = document.createElement('button'); gpx.className = 'ghost'; gpx.textContent = '⬇ GPX'; gpx.onclick = exportGPX; act.appendChild(gpx);
+    const kml = document.createElement('button'); kml.className = 'ghost'; kml.textContent = '⬇ KML'; kml.onclick = exportKML; act.appendChild(kml);
+  }
+  if(fval && fval !== 'none'){
+    const ren = document.createElement('button'); ren.className = 'ghost'; ren.textContent = '✎ Renommer'; ren.onclick = () => renameFolder(fval); act.appendChild(ren);
+    const del = document.createElement('button'); del.className = 'ghost'; del.textContent = '🗑 Supprimer dossier'; del.onclick = () => removeFolder(fval); act.appendChild(del);
+  }
+  box.innerHTML = '';
+  if(!view.length){ box.innerHTML = '<p class="muted">Aucun spot ne correspond à ces filtres. Enregistre des spots (💾) ou élargis les filtres.</p>'; return; }
+  if(fval === ''){   // vue « tous » : on groupe par dossier (en respectant les filtres)
+    const groups = [{ id: '', label: 'Sans dossier' }].concat(FOLDERS.map(f => ({ id: f.id, label: f.name })));
+    groups.forEach(g => {
+      const items = view.filter(s => (s.folder || '') === g.id);
+      if(!items.length) return;
+      const h = document.createElement('div'); h.className = 'folder-head'; h.textContent = '📁 ' + g.label + ' (' + items.length + ')'; box.appendChild(h);
+      items.forEach(s => box.appendChild(savedCard(s)));
+    });
+  } else {
+    view.forEach(s => box.appendChild(savedCard(s)));
+  }
+  updateSavedMap(); // la carte reflète les filtres
+}
+function download(filename, text, mime){
+  const blob = new Blob([text], { type: mime });
+  const u = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = u; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(u), 1000);
+}
+function exportSuffix(){
+  const fv = activeFolderVal();
+  if(fv && fv !== 'none') return '-' + slugify(folderName(fv));
+  if(fv === 'none') return '-sans-dossier';
+  return '';
+}
+function exportGPX(){
+  const view = savedFiltered();
+  if(!view.length){ alert('Aucun spot à exporter.'); return; }
+  const pts = view.map(s => `  <wpt lat="${s.lat}" lon="${s.lng}"><name>${escapeXml(s.name)}</name><desc>${escapeXml(s.label || s.category)}</desc></wpt>`).join('\n');
+  download('mes-spots' + exportSuffix() + '.gpx', `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Car Spot Finder" xmlns="http://www.topografix.com/GPX/1/1">\n${pts}\n</gpx>`, 'application/gpx+xml');
+}
+function exportKML(){
+  const view = savedFiltered();
+  if(!view.length){ alert('Aucun spot à exporter.'); return; }
+  const pts = view.map(s => `    <Placemark><name>${escapeXml(s.name)}</name><description>${escapeXml(s.label || s.category)}</description><Point><coordinates>${s.lng},${s.lat},0</coordinates></Point></Placemark>`).join('\n');
+  download('mes-spots' + exportSuffix() + '.kml', `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>\n${pts}\n</Document></kml>`, 'application/vnd.google-earth.kml+xml');
+}
+
+/* ================= copie vers la base data/spots.json ================= */
+async function copySpot(sp){
+  const entry = {
+    id: slugify(sp.name || 'spot'), name: sp.name || '', address: sp.address || '',
+    lat: sp.lat, lng: sp.lng, category: sp.category || 'à préciser',
+    car_styles: (sp.car_styles && sp.car_styles.length) ? sp.car_styles : [],
+    best_moment: 'tous', description: sp.description || '', access: '',
+    notes: 'Découvert via OpenStreetMap — à vérifier sur place (accès, légalité, propriété privée).'
+  };
+  const json = JSON.stringify(entry, null, 2);
+  try { await navigator.clipboard.writeText(json); alert('Entrée copiée. Colle-la dans data/spots.json.'); }
+  catch { prompt('Copie ce JSON dans data/spots.json :', json); }
+}
+
+/* ================= recherche libre par nom (Nominatim) ================= */
+async function searchNewSpots(){
+  const query = document.getElementById('search-query').value.trim() || 'point de vue Balma';
+  const box = document.getElementById('search-results');
+  box.innerHTML = '<p class="muted">Recherche en cours...</p>';
+  const viewbox = '1.31,43.76,1.69,43.46'; // ~15 km autour de Balma
+  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&q=' + encodeURIComponent(query)
+    + '&limit=10&bounded=1&viewbox=' + viewbox + '&namedetails=1&addressdetails=1';
+  try {
+    const resp = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
+    const data = await resp.json();
+    box.innerHTML = '';
+    (data || []).forEach(p => {
+      const lat = parseFloat(p.lat), lng = parseFloat(p.lon);
+      const name = (p.namedetails && p.namedetails.name) || (p.display_name ? p.display_name.split(',')[0] : 'Sans nom');
+      const el = document.createElement('div'); el.className = 'card';
+      const body = document.createElement('div');
+      body.innerHTML = `<h3>${escapeHtml(name)}</h3><p>${escapeHtml(p.display_name || '')}</p>
+        <p class="muted">${lat.toFixed(5)}, ${lng.toFixed(5)}${p.type ? ' · ' + escapeHtml(p.type) : ''}</p>`;
+      el.appendChild(body);
+      const actions = document.createElement('div');
+      makeActions(actions, { name, lat, lng, category: 'à préciser', label: p.type || '', car_styles: [] });
+      el.appendChild(actions);
+      el.addEventListener('click', () => map.setView([lat, lng], 15));
+      box.appendChild(el);
+    });
+    if(!data || !data.length){
+      box.innerHTML = '<p class="muted">Aucun résultat. Nominatim cherche par nom/adresse : essaie un nom précis (ex: "parking Balma", "Pech David").</p>';
+    }
+  } catch(e){ box.innerHTML = '<p class="muted">Erreur de requête vers OpenStreetMap. Réessaie dans un instant.</p>'; }
+}
+
+/* ================= chargement base ================= */
+async function loadSpots(){
+  try {
+    const resp = await fetch('data/spots.json', { cache: 'no-store' });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    SPOTS = data.spots || [];
+    fillBrowseCats();
+    resetMap(); renderBase(null); fitAll();
+  } catch(e){
+    const isFile = location.protocol === 'file:';
+    document.getElementById('load-error').innerHTML = `
+      <div class="banner warn"><b>Base locale non chargée</b> (la découverte OpenStreetMap fonctionne quand même).<br>
+        ${isFile
+          ? `Ouvre l'appli via <code>lancer-app.bat</code> ou un serveur : <code>python -m http.server 8000</code> puis <code>http://localhost:8000/app.html</code>.`
+          : `Détail : ${escapeHtml(e.message)}`}</div>`;
+  }
+}
+
+/* ================= tri visuel éclair (curation) ================= */
+const CUR_KEY = 'spotphoto_curation_v1';
+let CURATION = (() => { try { return JSON.parse(localStorage.getItem(CUR_KEY)) || {}; } catch { return {}; } })();
+let TRI_QUEUE = [];
+function persistCuration(){ localStorage.setItem(CUR_KEY, JSON.stringify(CURATION)); }
+function triStats(){
+  let keep = 0, rej = 0;
+  SPOTS.forEach(s => { if(CURATION[s.id] === 'keep') keep++; else if(CURATION[s.id] === 'reject') rej++; });
+  return { keep, rej, todo: SPOTS.length - keep - rej };
+}
+function startTri(){
+  TRI_QUEUE = SPOTS.filter(s => !CURATION[s.id]).map(s => s.id);
+  renderTri();
+}
+function renderTri(){
+  const st = triStats();
+  document.getElementById('tri-progress').innerHTML = `✅ ${st.keep} gardés · ❌ ${st.rej} rejetés · 🕐 <b>${st.todo}</b> restants`;
+  const box = document.getElementById('tri-card');
+  if(!TRI_QUEUE.length){
+    box.innerHTML = '<div class="banner info"><b>Tri terminé 🎉</b> Retrouve ta shortlist dans « Parcourir » (filtre Tri visuel : ✅ Gardés).</div>';
+    return;
+  }
+  const s = SPOTS.find(x => x.id === TRI_QUEUE[0]);
+  if(!s){ TRI_QUEUE.shift(); renderTri(); return; }
+  box.innerHTML = '';
+  const el = document.createElement('div'); el.className = 'card';
+  const wrap = document.createElement('div'); wrap.className = 'thumb-wrap'; wrap.style.height = '300px';
+  const img = new Image(); img.alt = 'vue satellite du lieu';
+  img.src = satUrl(s.lat, s.lng, 640, 300, 420); // vue ~840 m de large
+  wrap.appendChild(img);
+  const dot = document.createElement('span'); dot.className = 'thumb-dot'; dot.style.left = '50%'; dot.style.top = '50%';
+  wrap.appendChild(dot);
+  el.appendChild(wrap);
+  const color = CAT_COLORS[s.category] || '#757575';
+  const body = document.createElement('div');
+  body.innerHTML = `<h3>${escapeHtml(s.name)}</h3>
+    <p><span class="badge" style="background:${color}">${escapeHtml(s.category)}</span>${carBadge(s)}
+       <span class="muted">📍 ${haversine(CENTER[0], CENTER[1], s.lat, s.lng).toFixed(1)} km</span></p>
+    <p class="muted">${escapeHtml(s.description)}</p>`;
+  el.appendChild(body);
+  const act = document.createElement('div');
+  const keep = document.createElement('button'); keep.className = 'primary'; keep.style.marginRight = '8px';
+  keep.textContent = '✅ Garder'; keep.onclick = () => triMark('keep');
+  const rej = document.createElement('button'); rej.className = 'ghost'; rej.textContent = '❌ Rejeter';
+  rej.onclick = () => triMark('reject');
+  const skip = document.createElement('button'); skip.className = 'ghost'; skip.textContent = '⏭ Passer';
+  skip.onclick = () => { TRI_QUEUE.push(TRI_QUEUE.shift()); renderTri(); };
+  act.appendChild(keep); act.appendChild(rej); act.appendChild(skip);
+  act.appendChild(earthLink(s.lat, s.lng));
+  el.appendChild(act);
+  box.appendChild(el);
+}
+function triMark(v){
+  const id = TRI_QUEUE.shift();
+  if(id){ CURATION[id] = v; persistCuration(); }
+  renderTri();
+}
+function resetTri(){
+  if(!confirm('Effacer tout le tri (gardés + rejetés) ?')) return;
+  CURATION = {}; persistCuration(); startTri();
+}
+function sendKeptToSaved(){
+  const kept = SPOTS.filter(s => CURATION[s.id] === 'keep');
+  if(!kept.length){ alert('Aucun spot ✅ gardé pour l\'instant — fais d\'abord un peu de tri.'); return; }
+  const active = activeFolderVal();
+  const folder = (active && active !== 'none') ? active : '';
+  let added = 0;
+  kept.forEach(s => {
+    const id = slugify(s.name || 'spot') + '_' + (+s.lat).toFixed(4) + '_' + (+s.lng).toFixed(4);
+    if(SAVED.some(x => x.id === id)) return; // déjà dans Mes spots
+    SAVED.push({ id, name: s.name || '', lat: +s.lat, lng: +s.lng, category: s.category || 'autre',
+      label: s.category || '', rating: 0, favori: false, visite: false, note: '', folder });
+    added++;
+  });
+  persistSaved(); renderSaved();
+  alert(added + ' spot(s) ajoutés à « Mes spots »' + (folder ? ' (dossier « ' + folderName(folder) + ' »)' : '')
+    + (kept.length - added ? ' — ' + (kept.length - added) + ' déjà présents.' : '.'));
+}
+
+/* ================= onglet Parcourir la base ================= */
+function fillBrowseCats(){
+  const cats = [...new Set(SPOTS.map(s => s.category))].sort();
+  const sel = document.getElementById('browse-cat');
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">Tous les types</option>'
+    + cats.map(c => `<option value="${c}"${c === keep ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
+  document.getElementById('browse-count').textContent = SPOTS.length;
+}
+function carBadge(s){
+  if(typeof s.car_dist_m !== 'number') return '';
+  const d = s.car_dist_m;
+  const col = d <= 60 ? '#2e7d32' : d <= 150 ? '#e07b00' : '#c62828';
+  const ico = d <= 60 ? '🚗' : d <= 150 ? '🚶' : '⚠';
+  return ` <span class="badge" style="background:${col}">${ico} route à ${d} m</span>`;
+}
+function renderBrowse(){
+  const cat = document.getElementById('browse-cat').value;
+  const style = document.getElementById('browse-style').value;
+  const moment = document.getElementById('browse-moment').value;
+  const sort = document.getElementById('browse-sort').value;
+  const access = document.getElementById('browse-access').value;
+  const cur = document.getElementById('browse-curation').value;
+  let list = SPOTS.map(s => Object.assign({}, s, { dist: haversine(CENTER[0], CENTER[1], s.lat, s.lng) }));
+  if(cat) list = list.filter(s => s.category === cat);
+  if(style) list = list.filter(s => s.car_styles.includes(style));
+  if(moment) list = list.filter(s => s.best_moment === moment || s.best_moment === 'tous');
+  if(access) list = list.filter(s => typeof s.car_dist_m === 'number' && s.car_dist_m <= +access);
+  if(cur === 'keep' || cur === 'reject') list = list.filter(s => CURATION[s.id] === cur);
+  else if(cur === 'untried') list = list.filter(s => !CURATION[s.id]);
+  if(sort === 'nom') list.sort((a,b) => a.name.localeCompare(b.name, 'fr'));
+  else if(sort === 'cat') list.sort((a,b) => a.category.localeCompare(b.category) || a.dist - b.dist);
+  else list.sort((a,b) => a.dist - b.dist);
+  const box = document.getElementById('browse-results');
+  box.innerHTML = `<p class="muted"><b>${list.length}</b> spot(s) affiché(s) — triés par ${sort === 'nom' ? 'nom' : sort === 'cat' ? 'type' : 'distance'}.</p>`;
+  list.forEach(s => {
+    const el = document.createElement('div'); el.className = 'card';
+    const color = CAT_COLORS[s.category] || '#757575';
+    const body = document.createElement('div');
+    const curMark = CURATION[s.id] === 'keep' ? ' ✅' : CURATION[s.id] === 'reject' ? ' ❌' : '';
+    body.innerHTML = `<h3>${escapeHtml(s.name)}${curMark}</h3>
+      <p><span class="badge" style="background:${color}">${escapeHtml(s.category)}</span>${carBadge(s)}
+         <span class="muted">📍 ${s.dist.toFixed(1)} km · ${escapeHtml(s.best_moment)} · ${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</span></p>
+      <p>${escapeHtml(s.description)}</p>
+      <p class="muted">${escapeHtml(s.access)}</p>
+      ${s.contact ? `<p class="muted">📇 ${s.contact.email ? '📧 <a href="mailto:' + escapeHtml(s.contact.email) + '">' + escapeHtml(s.contact.email) + '</a> · ' : ''}${s.contact.phone ? '📞 ' + escapeHtml(s.contact.phone) + ' · ' : ''}${s.contact.website ? '🌐 <a href="' + escapeHtml(s.contact.website) + '" target="_blank" rel="noopener">site web</a>' : ''}</p>` : ''}`;
+    el.appendChild(body);
+    const actions = document.createElement('div');
+    makeActions(actions, { name: s.name, lat: s.lat, lng: s.lng, category: s.category, label: s.category, car_styles: s.car_styles });
+    el.appendChild(actions);
+    box.appendChild(el);
+  });
+}
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+  if(name === 'search' && map) setTimeout(() => map.invalidateSize(), 60); // la carte a besoin d'un recalcul quand elle redevient visible
+  if(name === 'browse') renderBrowse();
+  if(name === 'tri') startTri();
+  if(name === 'saved') ensureSavedMap();
+}
+
+/* ================= init ================= */
+document.getElementById('car-list').innerHTML = CAR_MODELS.map(m => `<option value="${escapeHtml(m)}">`).join('');
+document.getElementById('date-input').value = new Date().toISOString().slice(0, 10);
+document.getElementById('date-input').addEventListener('change', renderPlanning);
+initMap();
+renderPlanning();
+renderFolderFilter('');
+renderSaved();
+loadWeather();
+loadSpots();
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+// PWA : service worker (hors-ligne) — actif seulement en HTTPS ou localhost
+if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')){
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
