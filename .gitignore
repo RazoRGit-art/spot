@@ -1,3 +1,4 @@
 # fichier de contacts (emails/téléphones) : reste en local, pas sur le dépôt public
 contacts-chateaux.txt
 .claude/settings.local.json
+carspots-sauvegarde-*.json
